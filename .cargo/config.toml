@@ -1,0 +1,11 @@
+[env]
+CMAKE_TOOLCHAIN_FILE = "D:\\vcpkg\\scripts\\buildsystems\\vcpkg.cmake"
+VCPKG_ROOT = "D:\\vcpkg"
+VCPKG_DEFAULT_TRIPLET = "x64-windows"
+
+[build]
+rustflags = [
+  "-L", "native=D:\\vcpkg\\installed\\x64-windows\\lib",
+  "-l", "ole32",
+  "-l", "shell32"
+]

@@ -1,0 +1,14 @@
+[package]
+name = "tracking"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+rayon = "1.8"
+glam = "0.27"
+bytemuck = "1.14"
+wide = "1.1.1"
+proj = {version = "0.31.0", features = ["bundled_proj"]}
+quick-xml = "0.24.1"
+chrono = "0.4.43"
+
