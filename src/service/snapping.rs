@@ -176,7 +176,7 @@ pub fn snap_all(
         let mut out = Vec::with_capacity(rider.track.len());
         snap(&rider.track, &refs.track, grid, &mut out, config);
         MatchedTrack { 
-            bib: rider.bib,
+            bound_uuid: rider.rider_uuid.clone(),
             projection : refs.projection.clone(),
             variant: rider.variant,
             track_origin : rider.track_origin,

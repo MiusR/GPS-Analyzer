@@ -1,11 +1,12 @@
 
 use chrono::{DateTime, Utc};
+use uuid::Uuid;
 
 use crate::model::{spatial::points::{MatchPoint, RiderPoint}, track::common::TrackOrigin};
 
 #[derive(Clone)]
 pub struct MatchedTrack {
-    pub bib : u32,
+    pub bound_uuid : Uuid,
     pub variant : u32,
     pub projection : String,
     pub start_time : DateTime<Utc>,
@@ -15,7 +16,7 @@ pub struct MatchedTrack {
 
 #[derive(Clone)]
 pub struct RiderTrack {
-    pub bib : u32,
+    pub rider_uuid : Uuid,
     pub variant : u32,
     pub projection : String,
     pub start_time : DateTime<Utc>,

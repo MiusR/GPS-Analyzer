@@ -1,5 +1,7 @@
 use std::path::Path;
 
+use uuid::Uuid;
+
 use crate::{io::track_loader, model::{config::{coordinates::CoordinatesConfig, snapping::SnappingConfig}, spatial::grid::Grid, track::{common::TrackOrigin, reference::ReferenceTrack, riders::{MatchedTrack, RiderTrack}}}, service::{geo_conversions, service_errors::ServiceError, snapping::snap}};
 
 
@@ -45,8 +47,7 @@ pub fn process_reference_track(track_path : &Path, class_name : &str, origin_spa
     IOError if file is not found
     if file contains errors
 */
-pub fn process_rider_track(track_path : &Path, origin_space: &str, destination_space : &str, origin : &TrackOrigin) -> Result<RiderTrack, ServiceError> {
-    let (bib, variant) = compute_bib_from_file_name(track_path)?;
+pub fn process_rider_track(track_path : &Path, rider_uuid : Uuid, variant : u32, origin_space: &str, destination_space : &str, origin : &TrackOrigin) -> Result<RiderTrack, ServiceError> {
 
     let loaded_track = track_loader::load_track(track_path)
         .map_err( |err| {ServiceError::io_error(err)})?;
@@ -56,7 +57,7 @@ pub fn process_rider_track(track_path : &Path, origin_space: &str, destination_s
     let converted_track = geo_conversions::spatial_to_rider(&loaded_track.track, origin, &conv_config)?;
 
     Ok(RiderTrack {
-        bib : bib,
+        rider_uuid,
         projection : destination_space.to_string(),
         start_time : loaded_track.start_time,
         track : converted_track,
@@ -80,11 +81,11 @@ pub fn process_rider_track(track_path : &Path, origin_space: &str, destination_s
 */
 pub fn snap_rider_track(rider_track : &RiderTrack, ref_track: &ReferenceTrack, grid : &Grid, snapping_config : &SnappingConfig) -> Result<MatchedTrack, ServiceError> {
     if !rider_track.projection.eq_ignore_ascii_case(&ref_track.projection) {
-        Err(ServiceError::track_snapping_error(format!("tracks : {}_{} and {} are not in the same space", &rider_track.bib, &rider_track.variant, &ref_track.class).as_str()))?
+        Err(ServiceError::track_snapping_error(format!("tracks : {}_{} and {} are not in the same space", &rider_track.rider_uuid, &rider_track.variant, &ref_track.class).as_str()))?
     }
 
     if rider_track.track_origin != ref_track.origin {
-        Err(ServiceError::track_snapping_error(format!("tracks : {}_{} and {} are dont have the same track origin", &rider_track.bib, &rider_track.variant, &ref_track.class).as_str()))?
+        Err(ServiceError::track_snapping_error(format!("tracks : {}_{} and {} are dont have the same track origin", &rider_track.rider_uuid, &rider_track.variant, &ref_track.class).as_str()))?
     }
 
     let mut mapped_track = Vec::new();
@@ -92,7 +93,7 @@ pub fn snap_rider_track(rider_track : &RiderTrack, ref_track: &ReferenceTrack, g
     snap(&rider_track.track,&ref_track.track, grid, &mut mapped_track, snapping_config);
 
     Ok(MatchedTrack {
-        bib : rider_track.bib.clone(),
+        bound_uuid : rider_track.rider_uuid.clone(),
         variant : rider_track.variant.clone(),
         projection : ref_track.projection.clone(),
         start_time : rider_track.start_time,
@@ -118,11 +119,11 @@ pub fn snap_rider_track(rider_track : &RiderTrack, ref_track: &ReferenceTrack, g
 */
 pub fn snap_rider_track_inverse(rider_track : &RiderTrack, ref_track: &ReferenceTrack, grid : &Grid, snapping_config : &SnappingConfig) -> Result<MatchedTrack, ServiceError> {
     if !rider_track.projection.eq_ignore_ascii_case(&ref_track.projection) {
-        Err(ServiceError::track_snapping_error(format!("tracks : {}_{} and {} are not in the same space", &rider_track.bib, &rider_track.variant, &ref_track.class).as_str()))?
+        Err(ServiceError::track_snapping_error(format!("tracks : {}_{} and {} are not in the same space", &rider_track.rider_uuid, &rider_track.variant, &ref_track.class).as_str()))?
     }
 
     if rider_track.track_origin != ref_track.origin {
-        Err(ServiceError::track_snapping_error(format!("tracks : {}_{} and {} are dont have the same track origin", &rider_track.bib, &rider_track.variant, &ref_track.class).as_str()))?
+        Err(ServiceError::track_snapping_error(format!("tracks : {}_{} and {} are dont have the same track origin", &rider_track.rider_uuid, &rider_track.variant, &ref_track.class).as_str()))?
     }
 
     let mut mapped_track = Vec::new();
@@ -130,7 +131,7 @@ pub fn snap_rider_track_inverse(rider_track : &RiderTrack, ref_track: &Reference
     snap(&ref_track.track, &rider_track.track, grid, &mut mapped_track, snapping_config);
 
     Ok(MatchedTrack {
-        bib : rider_track.bib.clone(),
+        bound_uuid : rider_track.rider_uuid.clone(),
         variant : rider_track.variant.clone(),
         projection : ref_track.projection.clone(),
         start_time : rider_track.start_time,
@@ -140,29 +141,3 @@ pub fn snap_rider_track_inverse(rider_track : &RiderTrack, ref_track: &Reference
 
 }
 
-
-
-/*
-    Get bib and variant from path of the form
-    day_bib_variant
-*/
-fn compute_bib_from_file_name(path: &Path) -> Result<(u32, u32), ServiceError> {
-    let stem = path
-        .file_stem()
-        .ok_or(ServiceError::invalid_data("file does not have a stem"))?
-        .to_str()
-        .ok_or(ServiceError::invalid_data("file stem is not string compatible"))?;
-
-    let parts: Vec<&str> = stem.split('_').collect();
-
-    if parts.len() >= 3 {
-        Ok((
-            parts[1].trim().parse()
-            .map_err(|_| ServiceError::invalid_data("bib part is not of unsigned integer type or does not fit on 32 bits"))?, 
-            parts[2].trim().parse()
-            .map_err(|_| ServiceError::invalid_data("variant part is not of unsigned integer type or does not fit on 32 bits"))?
-        ))
-    } else {
-        Err(ServiceError::invalid_data("file name is not of format {day}_{bib}_{variant}"))
-    }
-}
