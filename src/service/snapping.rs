@@ -5,15 +5,10 @@ use wide::f32x8;
 use crate::model::{config::snapping::SnappingConfig, spatial::{grid::Grid, points::{MatchPoint, Point}}, track::{reference::ReferenceTrack, riders::{MatchedTrack, RiderTrack}}};
 
 /*
-    Snaps given point (px, py) to the closest reference point (refs).
+    Snaps given point (@px, @py) to the closest reference point in @refs.
     The refs are considered to be a slice of a bigger grid, as such indices are used to map to the original space.
     
     Dev Notes : uses smid, might break on different architectures but we get a small speed increase in snapping
-
-    px - x component of given point
-    py - y component of given point
-    refs - reference points
-    indices - global indices of reference points
 */
 #[inline(always)]
 pub fn min_distance<T : Point>(
@@ -78,12 +73,8 @@ pub fn min_distance<T : Point>(
 
 
 /*
-    Tries to snap a track to onto another track.
-    rider - set of rider points
-    refs - reference track
-    grid - canonical uniform grid
-    out - output parameter
-    config - uses continuity_clamp - if a "matched point" is not within the clamp the warning of no known best clamp
+    Tries to snap a @rider track to onto another @refs track using a @grid build on top of @refs.
+    Look at SnappingConfig.
 */
 pub fn snap<T: Point, U : Point>(
     rider : &[T],
@@ -163,7 +154,8 @@ pub fn snap<T: Point, U : Point>(
 
 
 /*
-    Parralel snapping of multiple rider tracks to a single track.
+    Parralel snapping of multiple @riders tracks to a single track @refs track with a build @grid on the @refs.
+    Look at SnappingConfig.
 */
 pub fn snap_all(
     riders : &[RiderTrack],

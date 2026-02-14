@@ -24,7 +24,7 @@ impl Severity {
 }
 
 /*
-    Set error 
+    Fileters the used point errors to prevent the buildup of one-off errors. Look at AnaltsysConfig.minimum_continuous_error
 */
 fn set_error_flags(
     matches: &mut [MatchPoint],

@@ -5,13 +5,9 @@ use uuid::Uuid;
 use crate::{io::track_loader, model::{config::{coordinates::CoordinatesConfig, snapping::SnappingConfig}, spatial::grid::Grid, track::{common::TrackOrigin, reference::ReferenceTrack, riders::{MatchedTrack, RiderTrack}}}, service::{geo_conversions, service_errors::ServiceError, snapping::snap}};
 
 
+// FIXME class_name should not be here, it should not be sored in ReferenceTrack, we should have a separate structure that composes a reference track and holds metadata about it!
 /*
-    Processes a ReferenceTrack from a file
-    track_path - path to file which must be gpx
-    class_name - name of class the reference represents
-    origin_space - origin space of the points
-    destination_space - destination space of the track
-
+    Generate a ReferenceTrack from a file found at @track_path.
     Throws: 
     ServiceError if spatial conversion fails,
     IOError if file is not found
@@ -36,12 +32,7 @@ pub fn process_reference_track(track_path : &Path, class_name : &str, origin_spa
 }
 
 /*
-    Processes a RiderTrack from a file with a ReferenceTrack
-    track_path - path to file which must be gpx
-    origin_space - space of origin of the track
-    destination_space - space of the resulting RiderTrack
-    origin - global origin in destination_space
-
+    Generates a RiderTrack from a file found at @track_path 
     Throws: 
     ServiceError if spatial conversion fails,
     IOError if file is not found
@@ -67,12 +58,7 @@ pub fn process_rider_track(track_path : &Path, rider_uuid : Uuid, variant : u32,
 }
 
 /*
-    Processes a MatchedTrack from a file with a ReferenceTrack
-    track_path - path to file which must be gpx
-    ref_track - track to which it can be matched
-    origin_space - origin space of the points
-    snapping_config - snapping settings for the track matching
-
+    Generates a MatchedTrack from a @rider_track with a @ref_track.
     Throws: 
     ServiceError if spatial coordinates are in different spaces
     if tracks dont have the same origin,
@@ -104,13 +90,8 @@ pub fn snap_rider_track(rider_track : &RiderTrack, ref_track: &ReferenceTrack, g
 }
 
 /*
-    Processes a MatchedTrack from a file with a ReferenceTrack BUT it tries to snap the ReferenceTrack to the file track
+    Generates a MatchedTrack from a @rider_track with a @ref_track BUT it tries to snap the @ref_track to the @rider_track
     at the cost of losing data about the seconds in the track
-    track_path - path to file which must be gpx
-    ref_track - track to which it can be matched
-    origin_space - origin space of the points
-    snapping_config - snapping settings for the track matching
-
     Throws: 
     ServiceError if spatial coordinates are in different spaces
     if tracks dont have the same origin,

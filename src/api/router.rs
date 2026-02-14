@@ -1,9 +1,11 @@
 
 use axum::{Router, routing::{get, post}};
 
-use crate::api::{controller::{file_upload::save_request_body, generic::system_info}, state::ServerState};
+use crate::api::{controller::{ file_controller::{download_from_temp, save_to_temp}, generic::system_info}, state::ServerState};
 
-
+/*
+    Creates the main app router using the @state
+*/
 pub fn build_router(state : ServerState) -> Router {
     Router::new()
     .route("/", get(system_info()))
@@ -11,7 +13,10 @@ pub fn build_router(state : ServerState) -> Router {
     .with_state(state)
 }
 
+/*
+    Creates the router holding only the track & analysis related endpoints
+*/
 fn api_router() -> Router<ServerState> {
     Router::new()
-    .route("/track/",  post(save_request_body))
+    .route("/track/",  post(save_to_temp).get(download_from_temp))
 }

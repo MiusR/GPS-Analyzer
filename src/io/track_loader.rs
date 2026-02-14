@@ -7,8 +7,7 @@ use crate::{io::io_errors::IOError, model::{spatial::points::SpatialPoint, track
 
 
 /*
-    Loads a track from a track file
-    path - path to file, must be gpx
+    Loads a track from a track a file with @path
  */
 pub fn load_track(path : &Path) -> Result<SpatialTrack, IOError> {
     if path.extension().ok_or(IOError::invalid_path(path.to_str().unwrap_or("unkown path"), "Could not collect path extension"))? != "gpx" {

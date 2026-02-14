@@ -4,15 +4,11 @@ use crate::{model::{config::coordinates::CoordinatesConfig, track::common::{Trac
 use crate::model::spatial::points::{RefPoint, RiderPoint, SpatialPoint};
 
 /*
-    Tries to convert from a vector of spatial points (SpatialPoint) into a vector of rider points (RiderPoint)
-    and computes a rolling distance in the new coordinate space.
-    spatial_points - array of SpatialPoints to be converted
-    config - conversion configuration
+    Tries to convert from a vector of @spatial_points into a vector of rider points
+    and computes a time offset from start
 
     Throws: CoordinateConversionError if any of the initial points can not be converted to the new space 
 */
-
-
 pub fn spatial_to_rider(spatial_points : &[SpatialPoint], track_origin : &TrackOrigin, config : &CoordinatesConfig) -> Result<Vec<RiderPoint>, ServiceError> {
     
     let reference_points = convert_to_space(spatial_points, &config, |(x64,y64), point| {
@@ -27,11 +23,8 @@ pub fn spatial_to_rider(spatial_points : &[SpatialPoint], track_origin : &TrackO
 }
 
 /*
-    Tries to convert from a vector of spatial points (SpatialPoint) into a vector of reference points (RefPoint)
+    Tries to convert from a vector of @spatial_points into a vector of reference points
     and computes a rolling distance in the new coordinate space.
-    spatial_points - array of SpatialPoints to be converted
-    config - conversion configuration
-
     Throws: CoordinateConversionError if any of the initial points can not be converted to the new space 
 */
 pub fn spatial_to_reference(spatial_points : &[SpatialPoint], config : &CoordinatesConfig) -> Result<(TrackOrigin, Vec<RefPoint>), ServiceError> {
@@ -68,11 +61,7 @@ pub fn spatial_to_reference(spatial_points : &[SpatialPoint], config : &Coordina
 
 
 /*
-    Converts from one coordinate space to another given a projection matrix and a transform function for the new output format
-    spatial_points - points to be converted, must implement into to a 3-touple of f64
-    config - conversion configurations
-    transform_fn - final processing function, goes from output of conversion to R
-
+    Converts a vector of @spatial_points from one coordinate space to another given a projection matrix given by @config and a transform function (@transform_fn) for the new output format
     Throws: CoordinateConversionError if any of the initial points can not be converted to the new space
 */
 pub fn convert_to_space<P, R>(

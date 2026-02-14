@@ -4,7 +4,7 @@ use axum::http::Method;
 use sqlx::{Pool, Postgres, postgres::PgPoolOptions};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use crate::api::{controller::file_upload, cors::build_cors_layer, router::build_router, state::ServerState};
+use crate::api::{controller::file_controller, cors::build_cors_layer, router::build_router, state::ServerState};
 
 pub mod model;
 pub mod service;
@@ -39,7 +39,7 @@ async fn main() {
         )
         .with(tracing_subscriber::fmt::layer())
         .init();
-    file_upload::init().await;
+    file_controller::init().await;
 
     let pool = connect_and_migrate().await;
     let server_state = ServerState::new(pool);
