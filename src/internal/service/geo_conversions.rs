@@ -1,6 +1,6 @@
 use proj::{Coord};
 
-use crate::internal::{model::{config::coordinates::CoordinatesConfig, track::common::{TrackOrigin}}, service::service_errors::ServiceError};
+use crate::{errors::service_errors::ServiceError, internal::model::{config::coordinates::CoordinatesConfig, track::common::TrackOrigin}};
 use crate::internal::model::spatial::points::{RefPoint, RiderPoint, SpatialPoint};
 
 /*

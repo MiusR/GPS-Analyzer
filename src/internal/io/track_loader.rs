@@ -3,8 +3,7 @@ use std::{fs::File, io::BufReader, path::Path};
 use chrono::{DateTime, Utc};
 use quick_xml::{Reader, events::Event};
 
-use crate::internal::{io::io_errors::IOError, model::{spatial::points::SpatialPoint, track::common::SpatialTrack}};
-
+use crate::{errors::io_errors::IOError, internal::model::{spatial::points::SpatialPoint, track::common::SpatialTrack}};
 
 /*
     Loads a track from a track a file with @path

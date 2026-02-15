@@ -25,7 +25,7 @@ impl Grid {
     // Build a grid from a reference track, cell_size is given in meters. A cell is cell_size * cell_size patch of real world space.
     pub fn from_track(ref_track : &ReferenceTrack, cell_size : f32) -> Self {
         // Find bounds of grid
-        let first = ref_track.track.get(0).expect("Track cannot be empty");
+        let first = ref_track.track.get(0).expect("Track cannot be empty"); // FIXME : why are we expecting on track in frid implementation? do you want to kill app randomly
         let mut min_x = first.x;
         let mut min_y = first.y;
         let mut max_x = first.x;

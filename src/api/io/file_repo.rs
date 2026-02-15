@@ -1,5 +1,5 @@
 use axum::{
-    BoxError, body::{Body, Bytes}, http::{HeaderName, StatusCode, header}
+    BoxError, body::{Body, Bytes}, http::{HeaderName, header}
 };
 
 use futures_util::{Stream, TryStreamExt};
@@ -7,18 +7,20 @@ use std::{io, pin::pin};
 use tokio::{fs::File, io::{AsyncWriteExt, BufWriter}};
 use tokio_util::io::{ReaderStream, StreamReader};
 
+use crate::errors::io_errors::IOError;
+
 
 /*
     Returns a pair of (HeaderName, Body) file with given @origin_path
 */
 pub async fn stream_from_file(
     origin_path : &str
-) -> Result<([(HeaderName, &str); 2], Body), StatusCode> {
+) -> Result<([(HeaderName, &str); 2], Body), IOError> {
     let file = File::open(origin_path)
         .await
         .map_err(|err| {
             tracing::warn!("Failed to open file: {}", err);
-            StatusCode::NOT_FOUND
+            return IOError::invalid_path("file stream", &("Failed to open file with provided name ".to_string() + origin_path))
         })?;
     let reader = ReaderStream::new(file);
     let body = Body::from_stream(reader);
@@ -37,14 +39,14 @@ pub async fn stream_to_file<S, E>(
     file_name : &str,
     secured_path : &str,
     stream : S
-) -> Result<(), (StatusCode, String)>
+) -> Result<(), IOError>
 where
     S: Stream<Item = Result<Bytes, E>>,
     E: Into<BoxError>,
 {
     if !path_is_valid(file_name) {
         tracing::error!("Upload file request contains illegal arguments in path {}", file_name);
-        return Err((StatusCode::BAD_REQUEST, "Invalid path".to_owned()));
+        return Err(IOError::invalid_path("file stream", "File path contains invalid arguments!"));
     }
 
    async {
@@ -66,7 +68,7 @@ where
     .await
     .map_err(|err| {
         tracing::error!("Failed to save file from stream: {}", err.to_string());
-        return (StatusCode::INTERNAL_SERVER_ERROR, "Uh oh! Something went wrong, please try again after a bit!".to_string());
+        return IOError::stream_error("file stream", "Uh oh! Failed to save file from stream, please try again!");
     })
 }
 

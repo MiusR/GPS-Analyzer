@@ -8,6 +8,7 @@ use crate::api::{controller::file_controller, cors::build_cors_layer, router::bu
 
 pub mod internal;
 pub mod api;
+pub mod errors;
 
 async fn connect_and_migrate() -> Pool<Postgres> {
     let db_url = env::var("DATABASE_URL").expect("No database url set.");

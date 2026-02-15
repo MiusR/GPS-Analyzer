@@ -1,6 +1,6 @@
-use std::{error::Error, fmt::{Display, Result}, time::SystemTime};
+use std::{error::Error, fmt::{Display, Result}};
 
-use crate::internal::io::io_errors::IOError;
+use crate::errors::io_errors::IOError;
 
 #[derive(Clone, Debug)]
 #[non_exhaustive]
@@ -32,7 +32,7 @@ impl ServiceError {
 
 impl Display for ServiceError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result {
-        write!(f, "SERVICE ERROR [{:?}] : {}", SystemTime::now(), self.etype)
+        write!(f, "SERVICE ERROR : {}", self.etype)
     }
 }
 

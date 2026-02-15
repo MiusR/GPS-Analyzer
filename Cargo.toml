@@ -15,6 +15,7 @@ chrono = "0.4.43"
 
 # Api related
 tokio = { version = "1.48.0", features = ["full"] }
+serde_json = "1.0.149"
 uuid = { version = "1.19.0", features = ["serde","v4"] }
 sqlx = { version = "0.8.6", features = ["postgres", "runtime-tokio-rustls", "uuid"] }
 axum = { version = "0.8.7", features = ["tokio", "http1", "http2", "macros", "multipart"] }

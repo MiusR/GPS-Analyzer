@@ -96,8 +96,8 @@ pub fn snap<T: Point, U : Point>(
         let mut best_index = 0u32;
         let mut direction_similarity = 0.0;
 
-        for &n in &neighbors {
-            let grid_cell = &grid.cells[n];
+        for &neighbor in &neighbors {
+            let grid_cell = &grid.cells[neighbor];
 
             if grid_cell.count == 0 {
                 continue;
