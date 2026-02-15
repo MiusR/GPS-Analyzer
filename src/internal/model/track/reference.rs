@@ -1,4 +1,4 @@
-use crate::model::{spatial::points::RefPoint, track::common::TrackOrigin};
+use crate::internal::model::{spatial::points::RefPoint, track::common::TrackOrigin};
 
 #[derive(Clone, Debug)]
 pub struct ReferenceTrack {

@@ -1,5 +1,5 @@
 
-use crate::model::{config::analysis::AnalysisConfig, spatial::points::MatchPoint};
+use crate::internal::model::{config::analysis::AnalysisConfig, spatial::points::MatchPoint};
 
 #[repr(u16)]
 #[derive(Debug, Clone, Copy)]

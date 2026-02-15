@@ -1,6 +1,6 @@
 use std::{error::Error, fmt::{Display, Result}, time::SystemTime};
 
-use crate::io::io_errors::IOError;
+use crate::internal::io::io_errors::IOError;
 
 #[derive(Clone, Debug)]
 #[non_exhaustive]

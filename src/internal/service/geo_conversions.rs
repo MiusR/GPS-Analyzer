@@ -1,7 +1,7 @@
 use proj::{Coord};
 
-use crate::{model::{config::coordinates::CoordinatesConfig, track::common::{TrackOrigin}}, service::service_errors::ServiceError};
-use crate::model::spatial::points::{RefPoint, RiderPoint, SpatialPoint};
+use crate::internal::{model::{config::coordinates::CoordinatesConfig, track::common::{TrackOrigin}}, service::service_errors::ServiceError};
+use crate::internal::model::spatial::points::{RefPoint, RiderPoint, SpatialPoint};
 
 /*
     Tries to convert from a vector of @spatial_points into a vector of rider points

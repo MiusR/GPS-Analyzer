@@ -1,7 +1,7 @@
 
 use axum::{Router, routing::{get, post}};
 
-use crate::api::{controller::{ file_controller::{download_from_temp, save_to_temp}, generic::system_info}, state::ServerState};
+use crate::api::{controller::{ file_controller::{download_from_temp, save_to_temp}, generic::system_info, tier_controller::{add_tier, get_tier_info}}, state::ServerState};
 
 /*
     Creates the main app router using the @state
@@ -19,4 +19,5 @@ pub fn build_router(state : ServerState) -> Router {
 fn api_router() -> Router<ServerState> {
     Router::new()
     .route("/track/",  post(save_to_temp).get(download_from_temp))
+    .route("/tier/", get(get_tier_info).post(add_tier))
 }

@@ -3,7 +3,9 @@ use std::{u32};
 
 use glam::Vec2;
 
-use crate::model::track::reference::ReferenceTrack;
+use crate::internal::model::track::reference::ReferenceTrack;
+
+
 
 pub struct GridCell {
     pub start: usize,

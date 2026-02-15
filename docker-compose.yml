@@ -31,6 +31,7 @@ services:
     restart: unless-stopped
 
   dev:
+    profiles: ["dev"]
     image: rust:latest
     working_dir: /app
     ports:

@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 
-use crate::model::spatial::points::SpatialPoint;
+use crate::internal::model::spatial::points::SpatialPoint;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct TrackOrigin {

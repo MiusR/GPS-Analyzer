@@ -2,7 +2,7 @@
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
-use crate::model::{spatial::points::{MatchPoint, RiderPoint}, track::common::TrackOrigin};
+use crate::internal::model::{spatial::points::{MatchPoint, RiderPoint}, track::common::TrackOrigin};
 
 #[derive(Clone)]
 pub struct MatchedTrack {

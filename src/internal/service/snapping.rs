@@ -2,7 +2,7 @@ use std::ops::{Add, Mul, Sub};
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use wide::f32x8;
 
-use crate::model::{config::snapping::SnappingConfig, spatial::{grid::Grid, points::{MatchPoint, Point}}, track::{reference::ReferenceTrack, riders::{MatchedTrack, RiderTrack}}};
+use crate::internal::model::{config::snapping::SnappingConfig, spatial::{grid::Grid, points::{MatchPoint, Point}}, track::{reference::ReferenceTrack, riders::{MatchedTrack, RiderTrack}}};
 
 /*
     Snaps given point (@px, @py) to the closest reference point in @refs.

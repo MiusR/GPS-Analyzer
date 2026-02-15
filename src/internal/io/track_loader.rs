@@ -3,7 +3,7 @@ use std::{fs::File, io::BufReader, path::Path};
 use chrono::{DateTime, Utc};
 use quick_xml::{Reader, events::Event};
 
-use crate::{io::io_errors::IOError, model::{spatial::points::SpatialPoint, track::common::SpatialTrack}};
+use crate::internal::{io::io_errors::IOError, model::{spatial::points::SpatialPoint, track::common::SpatialTrack}};
 
 
 /*

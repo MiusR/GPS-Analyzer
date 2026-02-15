@@ -13,4 +13,9 @@ impl ServerState {
             user_db : Arc::new(pg_pool)
         }
     }
+
+
+    pub fn get_user_db(&self) -> &PgPool {
+        &self.user_db
+    } 
 }

@@ -6,9 +6,7 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use crate::api::{controller::file_controller, cors::build_cors_layer, router::build_router, state::ServerState};
 
-pub mod model;
-pub mod service;
-pub mod io;
+pub mod internal;
 pub mod api;
 
 async fn connect_and_migrate() -> Pool<Postgres> {

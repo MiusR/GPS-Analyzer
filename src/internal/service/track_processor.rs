@@ -2,7 +2,7 @@ use std::path::Path;
 
 use uuid::Uuid;
 
-use crate::{io::track_loader, model::{config::{coordinates::CoordinatesConfig, snapping::SnappingConfig}, spatial::grid::Grid, track::{common::TrackOrigin, reference::ReferenceTrack, riders::{MatchedTrack, RiderTrack}}}, service::{geo_conversions, service_errors::ServiceError, snapping::snap}};
+use crate::internal::{io::track_loader, model::{config::{coordinates::CoordinatesConfig, snapping::SnappingConfig}, spatial::grid::Grid, track::{common::TrackOrigin, reference::ReferenceTrack, riders::{MatchedTrack, RiderTrack}}}, service::{geo_conversions, service_errors::ServiceError, snapping::snap}};
 
 
 // FIXME class_name should not be here, it should not be sored in ReferenceTrack, we should have a separate structure that composes a reference track and holds metadata about it!
