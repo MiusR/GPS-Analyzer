@@ -1,10 +1,11 @@
 use std::str::FromStr;
 
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{api::model::tier::Tier, errors::domain_error::DomainError};
 
-#[derive(Clone, Debug, )]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct User {
     uuid : Uuid,
     username : UserName,
@@ -14,10 +15,10 @@ pub struct User {
 
 
 // Validated 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct UserName(String);
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct UserEmail(String);
 
 

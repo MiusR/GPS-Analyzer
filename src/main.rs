@@ -4,7 +4,7 @@ use axum::http::Method;
 use sqlx::{Pool, Postgres, postgres::PgPoolOptions};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use crate::api::{controller::file_controller, cors::build_cors_layer, router::build_router, state::ServerState};
+use crate::api::{cors::build_cors_layer, router::build_router, service::file_service::FileService, state::ServerState};
 
 pub mod internal;
 pub mod api;
@@ -24,7 +24,7 @@ async fn start_server(server_state : ServerState) {
     let app = build_router(server_state)
     .layer(build_cors_layer(local_port, cors_methods));
     // TODO : Take params from .env or even better cli 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:8000").await.unwrap();
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:8000").await.expect("Adress and port must be valid and free.");
     tracing::debug!("Listening on {}", listener.local_addr().unwrap());
     let _ = axum::serve(listener,app).await;
 }
@@ -38,7 +38,7 @@ async fn main() {
         )
         .with(tracing_subscriber::fmt::layer())
         .init();
-    file_controller::init().await;
+    FileService::init().await;
 
     let pool = connect_and_migrate().await;
     let server_state = ServerState::new(pool);

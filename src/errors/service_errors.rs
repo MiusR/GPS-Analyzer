@@ -69,7 +69,7 @@ impl Display for ServiceErrorType {
             ServiceErrorType::IOError(err) =>
                 write!(f, "{}", err.to_string()),
             ServiceErrorType::InvalidData(err) =>
-                write!(f, "invalid data format: {}", err.to_string()),
+                write!(f, "invalid data format : {}", err.to_string()),
             ServiceErrorType::EmptyTrack() =>
                 write!(f, "Tried to process an empty track"),
             ServiceErrorType::TrackSnappingError(err) =>

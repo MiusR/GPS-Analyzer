@@ -1,4 +1,3 @@
--- TODO add unique constraint in next migration to name of tiers
 CREATE TABLE IF NOT EXISTS tiers (
     "id" UUID PRIMARY KEY,
     "name" TEXT NOT NULL,
