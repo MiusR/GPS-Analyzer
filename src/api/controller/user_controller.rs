@@ -1,12 +1,10 @@
-// TODO make user endpoints
-
 use axum::{Json, extract::State, response::IntoResponse};
 
-use crate::{api::{model::dto::user_requests::{CreateUserRequest, DeleteUserRequest, GetUserRequest, UpdateUserRequest}, state::ServerState}, errors::{app_error::AppError, service_errors::ServiceError}};
+use crate::{api::{model::dto::user_request::{CreateUserRequest, DeleteUserRequest, GetUserRequest, UpdateUserRequest}, state::AppState}, errors::{app_error::AppError, service_errors::ServiceError}};
 
 
 pub async fn get_user(
-    State(state) : State<ServerState>,
+    State(state) : State<AppState>,
     Json(payload) : Json<GetUserRequest>
 ) -> impl IntoResponse {
     if let Some(email) = payload.email {
@@ -30,7 +28,7 @@ pub async fn get_user(
 
 
 pub async fn create_user(
-    State(state) : State<ServerState>,
+    State(state) : State<AppState>,
     Json(payload) : Json<CreateUserRequest>
 ) -> impl IntoResponse {
     match state.get_user_service().create_user(&payload.name, &payload.email, &payload.tier).await {
@@ -40,7 +38,7 @@ pub async fn create_user(
 }
 
 pub async fn update_user(
-    State(state) : State<ServerState>,
+    State(state) : State<AppState>,
     Json(payload) : Json<UpdateUserRequest>
 ) -> impl IntoResponse {
     match state.get_user_service().update_user(&payload.uuid, payload.name, payload.email, payload.tier).await {
@@ -50,7 +48,7 @@ pub async fn update_user(
 }
 
 pub async fn delete_user(
-    State(state) : State<ServerState>,
+    State(state) : State<AppState>,
     Json(payload) : Json<DeleteUserRequest>
 ) -> impl IntoResponse {
     match state.get_user_service().delete_user(&payload.uuid).await {

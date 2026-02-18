@@ -37,7 +37,7 @@ impl UserRepository {
 
         let user_tier = Tier { uuid: user_row.tier_uuid, name: "Unkown".to_string(), max_tracks: 0 };
 
-        let user = User::new(&user_row.id.to_string(), &user_row.name, &user_row.email, user_tier).map_err(
+        let user = User::new(&user_row.id.to_string(), &user_row.name, &user_row.email, user_tier, user_row.provider, user_row.provider_user_id, user_row.avatar_url).map_err(
             |err| {
                 tracing::error!("Data for user with id {} is invalid : {}", &user_row.id.to_string(), err.to_string());
                 return IOError::domain_error("user internal",err)

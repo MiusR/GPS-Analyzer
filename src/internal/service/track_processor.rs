@@ -6,6 +6,7 @@ use crate::{errors::service_errors::ServiceError, internal::{io::track_loader, m
 
 
 // FIXME class_name should not be here, it should not be sored in ReferenceTrack, we should have a separate structure that composes a reference track and holds metadata about it!
+// FIXME organisational related data about tracks and other things should not be part of the internal track analysis, they differ from ogranisation to organisation
 /*
     Generate a ReferenceTrack from a file found at @track_path.
     Throws: 

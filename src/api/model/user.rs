@@ -1,16 +1,23 @@
 use std::str::FromStr;
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{api::model::tier::Tier, errors::domain_error::DomainError};
+use crate::{api::model::{auth::oauth::OAuthProvider, tier::Tier}, errors::domain_error::DomainError};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct User {
     uuid : Uuid,
     username : UserName,
     email : UserEmail,
-    tier : Tier
+    tier : Tier,
+    
+    provider: OAuthProvider,
+    provider_user_id: String,
+
+    avatar_url: Option<String>,
+    created_at: DateTime<Utc>,
 }
 
 
@@ -100,7 +107,7 @@ impl UserEmail {
 }
 
 impl User {
-    pub fn new(id : &str, name : &str, email : &str, tier : Tier) -> Result<Self, DomainError> {
+    pub fn new(id : &str, name : &str, email : &str, tier : Tier, provider: OAuthProvider, provider_user_id: String, avatar_url: Option<String>) -> Result<Self, DomainError> {
         let validated_id =  Uuid::from_str(id).map_err(
             |err| {
                 return DomainError::illegal_data_format("uuid", &err.to_string());
@@ -109,7 +116,15 @@ impl User {
         let validated_name = UserName::new(name)?;
         let validated_email = UserEmail::new(email)?;
 
-        Ok(User { uuid: validated_id, username: validated_name, email: validated_email, tier : tier })
+        Ok(User { uuid: validated_id, 
+            username: validated_name, 
+            email: validated_email, 
+            tier : tier,
+            avatar_url : avatar_url,
+            created_at : Utc::now(),
+            provider : provider,
+            provider_user_id : provider_user_id
+        })
     }
 
     pub fn get_name(&self) -> &UserName {
@@ -127,5 +142,23 @@ impl User {
     pub fn get_tier(&self) -> &Tier {
         return &self.tier;
     }
+
+    pub fn get_created_time(&self) -> &DateTime<Utc> {
+        &self.created_at
+    }
+
+    pub fn get_provider(&self) -> &OAuthProvider {
+        &self.provider
+    }
+
+    pub fn get_provider_user_id(&self) -> &str {
+        &self.provider_user_id
+    }
+
+    pub fn get_avatar_url(&self) -> &Option<String> {
+        &self.avatar_url
+    }
+
+
 
 }

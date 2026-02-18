@@ -17,12 +17,29 @@ services:
     volumes:
       - gps_postgres_data:/var/lib/postgresql/data
 
+  gps_redis:
+    image: redis:7-alpine
+    container_name: gps_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    volumes:
+      - redis_data:/data
+
   app:
     profiles: ["prod"]
     build: .
     container_name: gps_backend
     depends_on:
-      - gps_postgres
+      gps_postgres:
+        condition: service_healthy
+      gps_redis:
+        condition: service_healthy
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@gps_postgres:5432/${POSTGRES_DB}
       RUST_LOG: info
@@ -47,8 +64,12 @@ services:
       LIBPATH:
       VCPKG_ROOT:
       RUSTFLAGS:
+      REDIS_URL: ${REDIS_URL}
+      JWT_SECRET: ${JWT_SECRET}
     depends_on:
       gps_postgres:
+        condition: service_healthy
+      gps_redis:
         condition: service_healthy
 
 
@@ -57,3 +78,4 @@ volumes:
   gps_postgres_data:
   cargo_target:
   cargo_registry:
+  redis_data:

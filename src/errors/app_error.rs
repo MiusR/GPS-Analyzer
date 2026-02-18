@@ -23,6 +23,26 @@ impl AppError {
     pub fn domain_error(domain_error : DomainError) -> Self {
         return AppError { etype: AppErrorType::DomainError(domain_error) }
     }
+
+    pub fn auth_error(reason : &str) -> Self {
+        return AppError { etype: AppErrorType::AuthError(reason.to_string()) }
+    }
+
+    pub fn jwt(reason : &str) -> Self {
+        return AppError { etype: AppErrorType::JWT(reason.to_string()) }
+    }
+
+    pub fn invalid_token() -> Self {
+        return AppError { etype: AppErrorType::InvalidToken }
+    }
+
+    pub fn oauth2(reason : &str) -> Self {
+        return AppError { etype: AppErrorType::OAuth2(reason.to_string()) }
+    }
+
+    pub fn token_revoked() -> Self {
+        return AppError { etype: AppErrorType::TokenRevoked };
+    }
 }
 
 impl Display for AppError {
@@ -44,6 +64,11 @@ pub enum AppErrorType {
     DomainError(DomainError),
     IOError(IOError),
     ServiceError(ServiceError),
+    AuthError(String), // Reason
+    JWT(String),
+    InvalidToken,
+    OAuth2(String), // Reason
+    TokenRevoked
 }
 
 impl Display for AppErrorType {
@@ -58,6 +83,21 @@ impl Display for AppErrorType {
             AppErrorType::IOError(domain) => {
                 write!(f, "{}", domain.to_string())
             },
+            AppErrorType::AuthError(reason) => {
+                write!(f, "failed to authenticate : {}", reason)
+            },
+            AppErrorType::JWT(reason ) => {
+                write!(f, "JWT error : {}", reason)
+            },
+            AppErrorType::InvalidToken => {
+                write!(f, "Invalid token given")
+            },
+            AppErrorType::OAuth2(reason) => {
+                write!(f, "provider error : {}", reason)
+            },
+            AppErrorType::TokenRevoked => {
+                write!(f, "Due to security concerns your token has been revoked. Try to login again!")
+            }
         }
     }
 }
@@ -95,6 +135,18 @@ impl IntoResponse for AppError {
                     crate::errors::service_errors::ServiceErrorType::InvalidData(_) => StatusCode::BAD_REQUEST,
                     crate::errors::service_errors::ServiceErrorType::TrackSnappingError(_) => StatusCode::INTERNAL_SERVER_ERROR,
                 }
+            },
+            AppErrorType::AuthError(_) => {
+                StatusCode::FORBIDDEN
+            },
+            AppErrorType::JWT(_) => {
+                StatusCode::UNAUTHORIZED
+            },
+            AppErrorType::OAuth2(_) => {
+                StatusCode::FAILED_DEPENDENCY
+            },
+            AppErrorType::TokenRevoked => {
+                StatusCode::UNAUTHORIZED
             }
         };
 

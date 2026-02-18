@@ -2,6 +2,7 @@
 name = "gps-analyzer"
 version = "0.2.0"
 edition = "2024"
+publish = false
 
 [dependencies]
 # Track analysis related
@@ -15,13 +16,26 @@ chrono = "0.4.43"
 
 # Api related
 tokio = { version = "1.48.0", features = ["full"] }
-serde_json = "1.0.149"
-uuid = { version = "1.19.0", features = ["serde","v4"] }
+tokio-util = { version = "0.7", features = ["io"] }
 sqlx = { version = "0.8.6", features = ["postgres", "runtime-tokio-rustls", "uuid"] }
 axum = { version = "0.8.7", features = ["tokio", "http1", "http2", "macros", "multipart"] }
-serde = { version = "1.0.228", features = ["derive"] }
-tower-http = { version = "0.6.8", features = ["cors"] }
+futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
+jsonwebtoken = { version = "10.3.0", features = ["rust_crypto"] }
+redis = { version = "1.0", features = ["tokio-comp"] }
+bb8-redis = "0.26.0"
+oauth2 = "5.0.0"
+
+# logging
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tracing = "0.1.44"
-futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
-tokio-util = { version = "0.7", features = ["io"] }
+
+# middleware
+tower-http = { version = "0.6.8", features = ["cors"] }
+tower-sessions = "0.12"
+tower-cookies = "0.10"
+
+# util
+serde_json = "1.0.149"
+uuid = { version = "1.19.0", features = ["serde","v4"] }
+argon2 = "0.5"
+serde = { version = "1.0.228", features = ["derive"] }

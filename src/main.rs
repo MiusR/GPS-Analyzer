@@ -1,14 +1,20 @@
 use std::env;
 
 use axum::http::Method;
+use bb8_redis::{RedisConnectionManager, bb8};
 use sqlx::{Pool, Postgres, postgres::PgPoolOptions};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use crate::api::{cors::build_cors_layer, router::build_router, service::file_service::FileService, state::ServerState};
+use crate::api::{cors::build_cors_layer, router::build_router, service::file_service::FileService, state::AppState};
 
 pub mod internal;
 pub mod api;
 pub mod errors;
+
+async fn connect_and_cache() -> bb8::Pool<RedisConnectionManager> {
+    let manager = RedisConnectionManager::new(env::var("REDIS_URL").expect("Redis url not found in env!")).expect("Could not create redis connection manager");
+    bb8::Pool::builder().build(manager).await.expect("Could not create connection pool")
+}
 
 async fn connect_and_migrate() -> Pool<Postgres> {
     let db_url = env::var("DATABASE_URL").expect("No database url set.");
@@ -18,7 +24,7 @@ async fn connect_and_migrate() -> Pool<Postgres> {
     pool
 }
 
-async fn start_server(server_state : ServerState) {
+async fn start_server(server_state : AppState) {
     let cors_methods = vec![Method::GET, Method::POST];
     let local_port = "3000";
     let app = build_router(server_state)
@@ -41,6 +47,7 @@ async fn main() {
     FileService::init().await;
 
     let pool = connect_and_migrate().await;
-    let server_state = ServerState::new(pool);
+    let cache_pool = connect_and_cache().await;
+    let server_state = AppState::new("JWT_SECRET", pool, cache_pool);
     start_server(server_state).await;
 }
