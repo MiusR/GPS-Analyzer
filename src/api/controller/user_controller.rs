@@ -1,7 +1,7 @@
 use axum::{Json, extract::State, response::IntoResponse};
 use serde_json::json;
 
-use crate::{api::{middleware::auth::AuthenticatedUser, model::{auth::oauth::OAuthProvider, dto::user_request::{DeleteUserRequest, GetUserRequest, UpdateUserRequest}}, state::AppState}, errors::{app_error::AppError, service_errors::ServiceError}};
+use crate::{api::{middleware::auth::AuthenticatedUser, model::dto::user_request::{DeleteUserRequest, GetUserRequest, UpdateUserRequest}, state::AppState}, errors::{app_error::AppError, service_errors::ServiceError}};
 
 
 pub async fn get_me(

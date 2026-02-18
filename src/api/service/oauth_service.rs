@@ -7,7 +7,8 @@ use tower_cookies::{Cookie, Cookies};
 
 use crate::{api::{model::{auth::oauth::{OAuthProvider, ProviderUserInfo}, config::Config, user::User}, service::{jwt_service::{ACCESS_TOKEN_TTL_SECS, REFRESH_TOKEN_TTL_SECS}, user_service::UserService}, state::AppState}, errors::app_error::AppError};
 
-    // Cookie names
+// Cookie names
+// FIXME : move the global constant inside of util class
 const ACCESS_TOKEN_COOKIE: &str = "access_token";
 const REFRESH_TOKEN_COOKIE: &str = "refresh_token";
 
@@ -87,7 +88,7 @@ impl OAuthService {
 
         // Persist the refresh token record for revocation support
         let expires_at = Utc::now() + Duration::seconds(REFRESH_TOKEN_TTL_SECS);
-        state.store_refresh_token(user.get_uuid().clone(), jti, expires_at).await?;
+        state.get_jwt_service().store_refresh_token(user.get_uuid().clone(), jti, expires_at).await?;
 
         // Set HTTP-only cookies
         Self::set_auth_cookies(cookies, &access_token, &refresh_token);
@@ -123,7 +124,7 @@ impl OAuthService {
             .path("/")
             .http_only(true)
             .secure(true) // Only sent over HTTPS (set to false for local dev)
-            .same_site(tower_cookies::cookie::SameSite::Lax)
+            .same_site(tower_cookies::cookie::SameSite::Strict)
             .max_age(tower_cookies::cookie::time::Duration::seconds(REFRESH_TOKEN_TTL_SECS))
             .build();
 

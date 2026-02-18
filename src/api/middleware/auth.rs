@@ -47,8 +47,6 @@ impl FromRequestParts<AppState> for AuthenticatedUser {
     }
 }
 
-// ─── Helper for Bearer token fallback (optional) ──────────────────────────────
-
 /// If you want to support BOTH cookies AND Bearer tokens (for API clients),
 /// you can use this extractor instead:
 pub struct AuthenticatedUserFlexible(pub AccessClaims);

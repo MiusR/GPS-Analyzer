@@ -11,14 +11,18 @@ pub async fn refresh_token(
     cookies: Cookies,
 ) -> Result<impl IntoResponse, AppError> {
 
+    for cook in cookies.list().iter() {
+        tracing::debug!("Name {}, Value {}", cook.name(), cook.value());
+    }
     let refresh_token_str = cookies
         .get(REFRESH_TOKEN_COOKIE)
         .ok_or(AppError::invalid_token())?
         .value()
         .to_string();
+
     let claims = state.get_jwt_service().verify_refresh_token(&refresh_token_str)?;
     
-    let _record = state
+    let _record = state.get_jwt_service()
         .validate_refresh_token(&claims.jti).await
         .ok_or(AppError::token_revoked())?;
 
@@ -34,7 +38,7 @@ pub async fn refresh_token(
 
     let (refresh_token, new_jti) = state.get_jwt_service().issue_refresh_token(&user)?;
     let expires_at = Utc::now() + Duration::seconds(REFRESH_TOKEN_TTL_SECS);
-    state.store_refresh_token(user.get_uuid().clone(), new_jti, expires_at).await?;
+    state.get_jwt_service().store_refresh_token(user.get_uuid().clone(), new_jti, expires_at).await?;
 
     OAuthService::set_auth_cookies(&cookies, &access_token, &refresh_token);
 
@@ -51,6 +55,11 @@ pub async fn revoke_token(
     State(state): State<AppState>,
     cookies: Cookies,
 ) -> Result<impl IntoResponse, AppError> {
+
+    for cook in cookies.list().iter() {
+        tracing::debug!("Name {}, Value {}", cook.name(), cook.value());
+    }
+
     // Get refresh token from cookie
     let refresh_token_str = cookies
         .get(REFRESH_TOKEN_COOKIE)

@@ -2,7 +2,7 @@
 use std::sync::Arc;
 
 use bb8_redis::{RedisConnectionManager, bb8::{self, Pool}};
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -13,7 +13,7 @@ use crate::{api::{model::{config::Config, dto::jwt_request::RefreshTokenRecord},
 pub struct AppState {
     config : Arc<Config>,
 
-    cache_pool : bb8::Pool<RedisConnectionManager>,
+    cache_pool : Arc<bb8::Pool<RedisConnectionManager>>,
     db_pool : PgPool,
     
     user_service : Arc<UserService>,
@@ -25,14 +25,18 @@ pub struct AppState {
 
 impl AppState { 
     pub fn new(config : Config, pg_pool : PgPool, cache : bb8::Pool<RedisConnectionManager>) -> Self {
+        let shared_cache = Arc::new(cache);
+        let cache_clone = Arc::clone(&shared_cache);
+
         let tier_service = Arc::new(TierService::new(pg_pool.clone()));
         let tier_clone = Arc::clone(&tier_service);
         
         let user_service = Arc::new(UserService::new(pg_pool.clone(), tier_clone));
         let user_clone = Arc::clone(&user_service);
 
-        let jwt_service = Arc::new(JwtService::new(config.get_jwt_access_secret(), config.get_jwt_refresh_secret()));
+        let jwt_service = Arc::new(JwtService::new(config.get_jwt_access_secret(), config.get_jwt_refresh_secret(), cache_clone));
         let auth_service  = Arc::new(OAuthService::new(user_clone));
+        
         AppState {
             config : Arc::new(config),
             user_service : user_service,
@@ -40,74 +44,13 @@ impl AppState {
             tier_service :  tier_service,
             jwt_service : jwt_service,
             auth_service : auth_service,
-            cache_pool : cache,
+            cache_pool : shared_cache,
             db_pool : pg_pool.clone()
         }
     }
 
     //TODO Move this into jwt service -------------------------------------------------------------------------
 
-    pub async fn store_refresh_token(
-        &self,
-        user_id: Uuid,
-        jti: String,
-        expires_at: DateTime<Utc>,
-    ) -> Result<(), AppError> {
-        let record = RefreshTokenRecord {
-            user_id,
-            jti: jti.clone(),
-            expires_at,
-            revoked: false,
-        };
-        let serialized = serde_json::to_string(&record)
-            .map_err(|e| AppError::io_error(IOError::record_not_fround("redis", &e.to_string())))?;
-        
-        let ttl = (expires_at - Utc::now()).num_seconds().max(0) as u64;
-        let pool = self.cache_pool.clone();
-        
-        tokio::spawn(async move {
-            if let Ok(mut conn) = pool.get().await {
-                let _ = redis::cmd("SET")
-                    .arg(&jti)
-                    .arg(&serialized)
-                    .arg("EX")
-                    .arg(ttl)
-                    .query_async::<()>(&mut *conn)
-                    .await;
-            }
-        });
-        Ok(())
-    }
-
-
-    pub async fn validate_refresh_token(&self, jti: &str) -> Option<RefreshTokenRecord> {
-        let mut conn = self.cache_pool.get().await.ok()?;
-        let bytes = redis::cmd("GET")
-            .arg(jti)
-            .query_async::<Option<Vec<u8>>>(&mut *conn)
-            .await
-            .ok()??;
-        
-        let record: RefreshTokenRecord = serde_json::from_slice(&bytes).ok()?;
-        if record.revoked || record.expires_at <= Utc::now() {
-            return None;
-        }
-
-        // GLOBAL CACHE INVALIDATION 
-        let revoke_key = format!("revoked_all:{}", record.user_id);
-        if let Ok(Some(ts)) = redis::cmd("GET")
-            .arg(&revoke_key)
-            .query_async::<Option<i64>>(&mut *conn)
-            .await
-        {
-            let revoked_at = DateTime::from_timestamp(ts, 0)?;
-            if record.expires_at <= revoked_at {
-                return None;
-            }
-        }
-
-        Some(record)
-    }
 
     pub async fn revoke_refresh_token(&self, jti: &str) -> Result<(), AppError> {
         let mut conn = self.cache_pool.get().await
