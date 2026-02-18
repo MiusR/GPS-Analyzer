@@ -2,7 +2,7 @@
 use axum::{Router, routing::{get, post}};
 use tower_cookies::CookieManagerLayer;
 
-use crate::api::{controller::{ auth_controller::{github_callback, github_login, google_callback, google_login}, file_controller::{download_from_temp, save_to_temp}, generic::{health, system_info}, tier_controller::{add_tier, get_tier_info}, token_controller::{logout_all, refresh_token, revoke_token}, user_controller::{create_user, delete_user, get_user, update_user}}, state::AppState};
+use crate::api::{controller::{ auth_controller::{github_callback, github_login, google_callback, google_login}, file_controller::{download_from_temp, save_to_temp}, generic::{health, system_info}, tier_controller::{add_tier, get_tier_info}, token_controller::{logout_all, refresh_token, revoke_token}, user_controller::{delete_user, get_me, get_user, update_user}}, state::AppState};
 
 /*
     Creates the main app router using the @state
@@ -24,7 +24,7 @@ fn api_router() -> Router<AppState> {
     Router::new()
     .route("/track/",  post(save_to_temp).get(download_from_temp))
     .route("/tier/", get(get_tier_info).post(add_tier))
-    .route("/user/", get(get_user).post(create_user).put(update_user).delete(delete_user))
+    .route("/user/", get(get_user).put(update_user).delete(delete_user))
 }
 
 fn auth_router() -> Router<AppState> {
@@ -40,5 +40,6 @@ fn auth_router() -> Router<AppState> {
     .route("/revoke", post(revoke_token))
     .route("/logout-all", post(logout_all))
     
-    
+    //Util - atuenticated
+    .route("/me", get(get_me))
 }

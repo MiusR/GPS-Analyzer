@@ -1,6 +1,7 @@
-use axum::{extract::{Query, State}, response::{IntoResponse, Redirect}};
+use axum::{extract::{Query, State}, response::{IntoResponse, Redirect, Response}};
 use oauth2::{AuthorizationCode, CsrfToken, PkceCodeChallenge, PkceCodeVerifier, Scope, TokenResponse, reqwest};
 use serde::Deserialize;
+use tower_cookies::Cookies;
 
 use crate::{api::{model::auth::oauth::{GitHubUserInfo, GoogleUserInfo, OAuthCallback, OAuthProvider, ProviderUserInfo}, state::AppState}, errors::app_error::AppError};
 
@@ -29,7 +30,7 @@ pub async fn google_login(
         .url();
 
     // Store the CSRF state token for later verification
-    state.store_oauth_state(csrf_token.secret().clone(), pkce_verifier.into_secret());
+    state.store_oauth_state(csrf_token.secret().clone(), pkce_verifier.into_secret()).await;
 
     tracing::debug!("Redirecting user to Google OAuth2: {}", auth_url);
     Redirect::to(auth_url.as_str()).into_response()
@@ -40,8 +41,9 @@ pub async fn google_login(
     Api endpoint for oauth with google callback
 */
 pub async fn google_callback(
-    State(state): State<AppState>,
     Query(params): Query<OAuthCallback>,
+    State(state): State<AppState>,
+    cookie : Cookies,
 ) -> Result<impl IntoResponse, AppError> {
     // Surface any error from Google
     if let Some(error) = params.error {
@@ -50,13 +52,11 @@ pub async fn google_callback(
 
     let code = params.code.ok_or(AppError::oauth2("Missing code from google."))?;
     let csrf_state = params.state.ok_or(AppError::oauth2("Google state mismatch."))?;
-    let verifier = state.validate_and_consume_oauth_state(&csrf_state).await;
-    // Verify CSRF state
-    if !verifier.is_none() {
-        return Err(AppError::oauth2("Internal state mismatch. Sorry!"));
-    }
 
-    let verifier = verifier.unwrap();
+    let verifier = state
+    .validate_and_consume_oauth_state(&csrf_state)
+    .await
+    .ok_or(AppError::oauth2("Internal state mismatch. Sorry!"))?;
 
     let client = state.get_auth_service().google_client(state.get_config())?;
 
@@ -97,7 +97,7 @@ pub async fn google_callback(
         avatar_url: google_user.picture,
     };
 
-    state.get_auth_service().issue_tokens_for_provider(&state, OAuthProvider::Google, provider_info).await
+    state.get_auth_service().issue_tokens_for_provider(&state,&cookie, OAuthProvider::Google, provider_info).await
 }
 
 /*
@@ -115,7 +115,7 @@ pub async fn github_login(State(state): State<AppState>) -> impl IntoResponse {
         .add_scope(Scope::new("user:email".to_string()))
         .url();
 
-    state.store_oauth_state(csrf_token.secret().clone(), csrf_token.into_secret());
+    state.store_oauth_state(csrf_token.secret().clone(), csrf_token.into_secret()).await;
 
     tracing::debug!("Redirecting user to GitHub OAuth2: {}", auth_url);
     Redirect::to(auth_url.as_str()).into_response()
@@ -125,9 +125,10 @@ pub async fn github_login(State(state): State<AppState>) -> impl IntoResponse {
     Api endpoint for oauth with github callback
 */
 pub async fn github_callback(
-    State(state): State<AppState>,
     Query(params): Query<OAuthCallback>,
-) -> Result<impl IntoResponse, AppError> {
+    State(state): State<AppState>,
+    cookie : Cookies,
+) -> Result<Response, AppError> {
     if let Some(error) = params.error {
         return Err(AppError::oauth2(&format!("GitHub returned error: {error}")));
     }
@@ -135,7 +136,7 @@ pub async fn github_callback(
     let code = params.code.ok_or(AppError::oauth2("Missing code from google."))?;
     let verifier = state.validate_and_consume_oauth_state(&code).await;
     // Verify CSRF state
-    if !verifier.is_none() {
+    if verifier.is_none() {
         return Err(AppError::oauth2("Internal state mismatch. Sorry!"));
     }
 
@@ -185,7 +186,7 @@ pub async fn github_callback(
         avatar_url: github_user.avatar_url,
     };
 
-    state.get_auth_service().issue_tokens_for_provider(&state, OAuthProvider::GitHub, provider_info).await
+    state.get_auth_service().issue_tokens_for_provider(&state, &cookie, OAuthProvider::GitHub, provider_info).await
 }
 
 

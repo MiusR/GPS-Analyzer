@@ -23,7 +23,8 @@ pub struct UpdateUserRequest {
     pub uuid : Uuid,
     pub name: Option<String>,
     pub email : Option<String>,
-    pub tier : Option<String>
+    pub tier : Option<String>,
+    pub avatar_url : Option<String>
 }
 
 #[derive(Deserialize)]

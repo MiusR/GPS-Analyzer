@@ -17,7 +17,7 @@ chrono = "0.4.43"
 # Api related
 tokio = { version = "1.48.0", features = ["full"] }
 tokio-util = { version = "0.7", features = ["io"] }
-sqlx = { version = "0.8.6", features = ["postgres", "runtime-tokio-rustls", "uuid"] }
+sqlx = { version = "0.8.6", features = ["postgres", "runtime-tokio-rustls", "uuid", "chrono"] }
 axum = { version = "0.8.7", features = ["tokio", "http1", "http2", "macros", "multipart"] }
 futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
 jsonwebtoken = { version = "10.3.0", features = ["rust_crypto"] }
@@ -31,8 +31,8 @@ tracing = "0.1.44"
 
 # middleware
 tower-http = { version = "0.6.8", features = ["cors"] }
-tower-sessions = "0.12"
-tower-cookies = "0.10"
+tower-sessions = "0.15.0"
+tower-cookies = "0.11.0"
 
 # util
 serde_json = "1.0.149"

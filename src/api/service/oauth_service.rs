@@ -1,12 +1,19 @@
-use axum::Json;
+use std::sync::Arc;
+
+use axum::{Json, http::{StatusCode}, response::{IntoResponse, Response}};
 use chrono::{Duration, Utc};
-use oauth2::{AuthUrl, Client, ClientId, ClientSecret, EndpointNotSet, EndpointSet, RedirectUrl, StandardRevocableToken, TokenUrl, basic::{BasicClient, BasicErrorResponse, BasicRevocationErrorResponse, BasicTokenIntrospectionResponse, BasicTokenResponse, BasicTokenType}};
+use oauth2::{AuthUrl, Client, ClientId, ClientSecret, EndpointNotSet, EndpointSet, RedirectUrl, StandardRevocableToken, TokenUrl, basic::{BasicClient, BasicErrorResponse, BasicRevocationErrorResponse, BasicTokenIntrospectionResponse, BasicTokenResponse}};
+use tower_cookies::{Cookie, Cookies};
 
-use crate::{api::{model::{auth::oauth::{OAuthProvider, ProviderUserInfo}, config::Config, dto::jwt_request::TokenResponse}, service::jwt_service::{ACCESS_TOKEN_TTL_SECS, REFRESH_TOKEN_TTL_SECS}, state::AppState}, errors::app_error::AppError};
+use crate::{api::{model::{auth::oauth::{OAuthProvider, ProviderUserInfo}, config::Config, user::User}, service::{jwt_service::{ACCESS_TOKEN_TTL_SECS, REFRESH_TOKEN_TTL_SECS}, user_service::UserService}, state::AppState}, errors::app_error::AppError};
 
+    // Cookie names
+const ACCESS_TOKEN_COOKIE: &str = "access_token";
+const REFRESH_TOKEN_COOKIE: &str = "refresh_token";
 
-
-pub struct OAuthService();
+pub struct OAuthService {
+     user_service : Arc<UserService>
+}
 
 type ConfiguredClient = Client<
     BasicErrorResponse,
@@ -21,21 +28,54 @@ type ConfiguredClient = Client<
     EndpointSet>;
 
 impl OAuthService {
+
+    pub fn new(user_service : Arc<UserService>) -> Self {
+        OAuthService { user_service: user_service }
+    }
+
+    pub async fn upsert_user(
+        &self,
+        provider: OAuthProvider,
+        provider_user_id: String,
+        email: String,
+        name: String,
+        avatar_url: Option<String>,
+    ) -> Result<User, AppError> {
+
+        if let Ok(user) = self.user_service.get_user_by_provider(provider, &provider_user_id).await {
+            return Ok(user);
+        }
+
+        // TODO : dont use magic constant here 
+        let uuid = self.user_service.create_user(&name, &email, "Basic", provider.clone(), &provider_user_id, avatar_url).await?;
+        self.user_service.get_user_by_uuid(&uuid).await
+    }
+
+
     // Token issuer
+
     pub async fn issue_tokens_for_provider(
         &self,
         state: &AppState,
+        cookies: &Cookies,
         provider: OAuthProvider,
         info: ProviderUserInfo,
-    ) -> Result<Json<TokenResponse>, AppError> {
+    ) -> Result<Response, AppError> {
+        if info.email.is_none() {
+            return Err(AppError::auth_error("Authentication provider did not provide email for client."));
+        }
+        if info.name.is_none() {
+            return Err(AppError::auth_error("Authentication provider did not provide name for client."));
+        }
+
         // Upsert user in the store
-        let user = state.upsert_user(
+        let user = self.upsert_user(
             provider,
             info.provider_user_id,
-            info.email,
-            info.name,
+            info.email.unwrap(),
+            info.name.unwrap(),
             info.avatar_url,
-        );
+        ).await?;
 
         tracing::debug!("Authenticated user: {} ({})", user.get_uuid(), user.get_provider());
 
@@ -47,15 +87,72 @@ impl OAuthService {
 
         // Persist the refresh token record for revocation support
         let expires_at = Utc::now() + Duration::seconds(REFRESH_TOKEN_TTL_SECS);
-        state.store_refresh_token(user.get_uuid(), jti, expires_at);
+        state.store_refresh_token(user.get_uuid().clone(), jti, expires_at).await?;
 
-        Ok(Json(TokenResponse {
-            access_token,
-            refresh_token,
-            token_type: "Bearer".to_string(),
-            expires_in: ACCESS_TOKEN_TTL_SECS as u64,
-        }))
+        // Set HTTP-only cookies
+        Self::set_auth_cookies(cookies, &access_token, &refresh_token);
+
+        // Return success response (tokens are now in cookies, not body)
+        Ok((
+            StatusCode::OK,
+            Json(serde_json::json!({
+                "message": "Authentication successful",
+                "user": {
+                    "id": user.get_uuid().to_string(),
+                    "email": user.get_email(),
+                    "name": user.get_name(),
+                    "provider": user.get_provider().to_string(),
+                }
+            }))
+        ).into_response())
     }
+
+
+    pub fn set_auth_cookies(cookies: &Cookies, access_token: &str, refresh_token: &str) {
+        // Access token cookie (5 minutes)
+        let access_cookie = Cookie::build((ACCESS_TOKEN_COOKIE, access_token))
+            .path("/")
+            .http_only(true)
+            .secure(true) // Only sent over HTTPS (set to false for local dev)
+            .same_site(tower_cookies::cookie::SameSite::Lax)
+            .max_age(tower_cookies::cookie::time::Duration::seconds(ACCESS_TOKEN_TTL_SECS))
+            .build();
+
+        // Refresh token cookie (1 day)
+        let refresh_cookie = Cookie::build((REFRESH_TOKEN_COOKIE, refresh_token))
+            .path("/")
+            .http_only(true)
+            .secure(true) // Only sent over HTTPS (set to false for local dev)
+            .same_site(tower_cookies::cookie::SameSite::Lax)
+            .max_age(tower_cookies::cookie::time::Duration::seconds(REFRESH_TOKEN_TTL_SECS))
+            .build();
+
+        cookies.add(access_cookie.into_owned());
+        cookies.add(refresh_cookie.into_owned());
+    }
+
+    pub fn clear_auth_cookies(cookies: &Cookies) {
+        let mut access_cookie = Cookie::build((ACCESS_TOKEN_COOKIE, ""))
+            .path("/")
+            .http_only(true)
+            .secure(true)
+            .same_site(tower_cookies::cookie::SameSite::Lax)
+            .build();
+        access_cookie.make_removal();
+
+        let mut refresh_cookie = Cookie::build((REFRESH_TOKEN_COOKIE, ""))
+            .path("/")
+            .http_only(true)
+            .secure(true)
+            .same_site(tower_cookies::cookie::SameSite::Lax)
+            .build();
+        refresh_cookie.make_removal();
+
+        cookies.remove(access_cookie);
+        cookies.remove(refresh_cookie); 
+    }
+
+
 
     // Client Creation
     

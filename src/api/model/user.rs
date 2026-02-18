@@ -37,11 +37,11 @@ impl UserName {
         }
         
         // Allowed charaters check
-        if let Some((index, invalid)) = trimmed.char_indices()
-            .find(|&(_,c)| !(c.is_ascii_alphanumeric() || c == '_'))
-        {
-            return Err(DomainError::illegal_character("username", invalid, index));
-        }
+        // if let Some((index, invalid)) = trimmed.char_indices()
+        //     .find(|&(_,c)| !(c.is_ascii_alphanumeric() || c == '_'))
+        // {
+        //     return Err(DomainError::illegal_character("username", invalid, index));
+        // }
 
         Ok(UserName(trimmed.to_string()))
     }

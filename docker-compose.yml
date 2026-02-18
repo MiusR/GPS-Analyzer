@@ -59,13 +59,21 @@ services:
       - cargo_registry:/usr/local/cargo/registry # optional: cache downloaded crates
     command: bash -c "apt-get update && apt-get install -y cmake build-essential clang pkg-config sqlite3 libsqlite3-dev pkg-config && rm -rf /var/lib/apt/lists/* && cargo run"
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@gps_postgres:5432/${POSTGRES_DB}
+      DATABASE_URL: ${DATABASE_URL}
+      SERVER_HOST: ${SERVER_HOST}
+      SERVER_PORT: ${SERVER_PORT}
+      APP_URL: ${APP_URL}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      REDIS_URL: ${REDIS_URL}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
       LIB:
       LIBPATH:
       VCPKG_ROOT:
       RUSTFLAGS:
-      REDIS_URL: ${REDIS_URL}
-      JWT_SECRET: ${JWT_SECRET}
     depends_on:
       gps_postgres:
         condition: service_healthy

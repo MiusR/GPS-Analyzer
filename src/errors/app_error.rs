@@ -104,6 +104,22 @@ impl Display for AppErrorType {
 
 impl Error for AppErrorType {}
 
+impl From<DomainError> for AppError {
+    fn from(value: DomainError) -> Self {
+        AppError::domain_error(value)
+    }
+}
+impl From<ServiceError> for AppError {
+    fn from(value: ServiceError) -> Self {
+        AppError::service_error(value)
+    }
+}
+impl From<IOError> for AppError {
+    fn from(value: IOError) -> Self {
+        AppError::io_error(value)
+    }
+}
+
 fn map_io_to_status_code(kind : &IOErrorType) -> StatusCode {
     match kind {
                     crate::errors::io_errors::IOErrorType::FormatNotSupported(_) => StatusCode::BAD_REQUEST,
@@ -146,6 +162,9 @@ impl IntoResponse for AppError {
                 StatusCode::FAILED_DEPENDENCY
             },
             AppErrorType::TokenRevoked => {
+                StatusCode::UNAUTHORIZED
+            },
+            AppErrorType::InvalidToken => {
                 StatusCode::UNAUTHORIZED
             }
         };

@@ -1,10 +1,12 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+use crate::errors::domain_error::DomainError;
+
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "lowercase")]
 pub enum OAuthProvider {
     Google,
-    GitHub,
+    GitHub
 }
 
 impl std::fmt::Display for OAuthProvider {
@@ -15,6 +17,19 @@ impl std::fmt::Display for OAuthProvider {
         }
     }
 }
+
+impl TryFrom<String> for OAuthProvider {
+    type Error = DomainError;
+    
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+         match value.as_str() {
+            "google" => Ok(OAuthProvider::Google),
+            "github" => Ok(OAuthProvider::GitHub),
+            val => Err(DomainError::illegal_data_format("provider", &format!("Provider [{}] not in known list of providers.", val)))
+        }
+    }
+}
+
 
 // Normalised user info returned from any OAuth provider
 #[derive(Debug)]

@@ -5,7 +5,7 @@ use bb8_redis::{RedisConnectionManager, bb8};
 use sqlx::{Pool, Postgres, postgres::PgPoolOptions};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use crate::api::{cors::build_cors_layer, router::build_router, service::file_service::FileService, state::AppState};
+use crate::api::{cors::build_cors_layer, model::config::Config, router::build_router, service::file_service::FileService, state::AppState};
 
 pub mod internal;
 pub mod api;
@@ -35,6 +35,7 @@ async fn start_server(server_state : AppState) {
     let _ = axum::serve(listener,app).await;
 }
 
+
 #[tokio::main]
 async fn main() {
     tracing_subscriber::registry()
@@ -48,6 +49,6 @@ async fn main() {
 
     let pool = connect_and_migrate().await;
     let cache_pool = connect_and_cache().await;
-    let server_state = AppState::new("JWT_SECRET", pool, cache_pool);
+    let server_state = AppState::new(Config::from_env(), pool, cache_pool);
     start_server(server_state).await;
 }

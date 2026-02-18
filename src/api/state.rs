@@ -1,13 +1,12 @@
 
 use std::sync::Arc;
 
-use bb8_redis::{RedisConnectionManager, bb8::{self, Pool, RunError}};
+use bb8_redis::{RedisConnectionManager, bb8::{self, Pool}};
 use chrono::{DateTime, Utc};
-use redis::{AsyncCommands, RedisError};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::{api::{model::{auth::oauth::OAuthProvider, config::Config, dto::jwt_request::RefreshTokenRecord, user::User}, service::{file_service::FileService, jwt_service::JwtService, oauth_service::OAuthService, tier_service::TierService, user_service::UserService}}, errors::{app_error::AppError, io_errors::IOError}};
+use crate::{api::{model::{config::Config, dto::jwt_request::RefreshTokenRecord}, service::{file_service::FileService, jwt_service::JwtService, oauth_service::OAuthService, tier_service::TierService, user_service::UserService}}, errors::{app_error::AppError, io_errors::IOError}};
 
 
 #[derive(Clone)]
@@ -17,7 +16,7 @@ pub struct AppState {
     cache_pool : bb8::Pool<RedisConnectionManager>,
     db_pool : PgPool,
     
-    user_service : UserService,
+    user_service : Arc<UserService>,
     file_service : FileService,
     tier_service : Arc<TierService>,
     jwt_service : Arc<JwtService>,
@@ -29,11 +28,14 @@ impl AppState {
         let tier_service = Arc::new(TierService::new(pg_pool.clone()));
         let tier_clone = Arc::clone(&tier_service);
         
+        let user_service = Arc::new(UserService::new(pg_pool.clone(), tier_clone));
+        let user_clone = Arc::clone(&user_service);
+
         let jwt_service = Arc::new(JwtService::new(config.get_jwt_access_secret(), config.get_jwt_refresh_secret()));
-        let auth_service  = Arc::new(OAuthService {});
+        let auth_service  = Arc::new(OAuthService::new(user_clone));
         AppState {
             config : Arc::new(config),
-            user_service : UserService::new(pg_pool.clone(), tier_clone),
+            user_service : user_service,
             file_service : FileService::new(),
             tier_service :  tier_service,
             jwt_service : jwt_service,
@@ -41,26 +43,6 @@ impl AppState {
             cache_pool : cache,
             db_pool : pg_pool.clone()
         }
-    }
-
-    pub fn upsert_user(
-        &self,
-        provider: OAuthProvider,
-        provider_user_id: String,
-        email: Option<String>,
-        name: Option<String>,
-        avatar_url: Option<String>,
-    ) -> User {
-        let key = (provider.clone(), provider_user_id.clone());
-
-        if let Some(existing) = self.user_service.get(&key) {
-            return existing.clone();
-        }
-
-        let user = User::new(provider, provider_user_id, email, name, avatar_url);
-        self.users.insert(key, user.clone());
-        self.users_by_id.insert(user.id, user.clone());
-        user
     }
 
     //TODO Move this into jwt service -------------------------------------------------------------------------

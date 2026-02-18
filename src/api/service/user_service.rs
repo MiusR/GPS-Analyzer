@@ -3,7 +3,7 @@ use std::sync::Arc;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::{api::{model::user::{User, UserEmail}, repository::user_repository::UserRepository, service::tier_service::TierService}, errors::app_error::AppError};
+use crate::{api::{model::{auth::oauth::OAuthProvider, user::{User, UserEmail}}, repository::user_repository::UserRepository, service::tier_service::TierService}, errors::app_error::AppError};
 
 
 
@@ -26,9 +26,9 @@ impl UserService {
         })
     }
 
-    pub async fn create_user(&self, name : &str, email : &str, tier_name : &str) -> Result<Uuid, AppError> {
+    pub async fn create_user(&self, name : &str, email : &str, tier_name : &str, provider : OAuthProvider, provider_client_id : &str, avatar_url : Option<String>) -> Result<Uuid, AppError> {
         let tier = self.tier_service.get_tier_by_name(tier_name).await?;
-        self.user_repository.add_user(name, email, tier).await.map_err(|err| {
+        self.user_repository.add_user(name, email, tier, provider, provider_client_id, avatar_url).await.map_err(|err| {
             AppError::io_error(err)
         })
     }
@@ -42,7 +42,31 @@ impl UserService {
             &partial_user.get_uuid().to_string(), 
             &partial_user.get_name().to_string(), 
             &partial_user.get_email().to_string(),
-            tier
+            tier,
+            partial_user.get_provider().clone(),
+            partial_user.get_provider_user_id().to_string(),
+            partial_user.get_avatar_url().clone()
+        ).map_err(|err| {
+            AppError::domain_error(err)
+        })?;
+
+        Ok(user)
+    }
+
+    pub async fn get_user_by_provider(&self, provider : OAuthProvider, client_provider_uuid : &str) -> Result<User, AppError> {
+         let partial_user  = self.user_repository.get_user_by_provider(provider, client_provider_uuid).await.map_err(|err| {
+            AppError::io_error(err)
+        })?;
+
+        let tier = self.tier_service.get_tier_by_uuid(&partial_user.get_tier().uuid).await?;
+        let user = User::new(
+            &partial_user.get_uuid().to_string(), 
+            &partial_user.get_name().to_string(), 
+            &partial_user.get_email().to_string(),
+            tier,
+            partial_user.get_provider().clone(),
+            partial_user.get_provider_user_id().to_string(),
+            partial_user.get_avatar_url().clone()
         ).map_err(|err| {
             AppError::domain_error(err)
         })?;
@@ -65,7 +89,10 @@ impl UserService {
             &partial_user.get_uuid().to_string(), 
             &partial_user.get_name().to_string(), 
             &partial_user.get_email().to_string(),
-            tier
+            tier,
+            partial_user.get_provider().clone(),
+            partial_user.get_provider_user_id().to_string(),
+            partial_user.get_avatar_url().clone()
         ).map_err(|err| {
             AppError::domain_error(err)
         })?;
@@ -73,13 +100,13 @@ impl UserService {
         Ok(user)
     }
 
-    pub async fn update_user(&self, uuid : &Uuid, name : Option<String>, email : Option<String>, tier : Option<String>) -> Result<User, AppError> {
+    pub async fn update_user(&self, uuid : &Uuid, name : Option<String>, email : Option<String>, tier : Option<String>, avatar_url : Option<String>) -> Result<User, AppError> {
         let fetched_tier = match tier {
             Some(tier_name) => Some(self.tier_service.get_tier_by_name(&tier_name).await?),
             None => None
         };
 
-        let partial_user = self.user_repository.update_user(uuid, name, email, fetched_tier).await.map_err(|err| {
+        let partial_user = self.user_repository.update_user(uuid, name, email, fetched_tier, avatar_url).await.map_err(|err| {
             AppError::io_error(err)
         })?;
 
@@ -89,7 +116,10 @@ impl UserService {
             &partial_user.get_uuid().to_string(), 
             &partial_user.get_name().to_string(), 
             &partial_user.get_email().to_string(),
-            tier
+            tier,
+            partial_user.get_provider().clone(),
+            partial_user.get_provider_user_id().to_string(),
+            partial_user.get_avatar_url().clone()
         ).map_err(|err| {
             AppError::domain_error(err)
         })?;

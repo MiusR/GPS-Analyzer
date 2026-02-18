@@ -1,6 +1,6 @@
 ALTER TABLE users 
     -- Add OAuth columns
-    ADD COLUMN provider TEXT NOT NULL,
+    ADD COLUMN "provider" TEXT NOT NULL,
     ADD COLUMN provider_user_id TEXT NOT NULL,
 
     -- Add optional avatar
