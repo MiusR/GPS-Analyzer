@@ -2,7 +2,7 @@ use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 use chrono::{Duration, Utc};
 use tower_cookies::Cookies;
 
-use crate::{api::{service::{jwt_service::REFRESH_TOKEN_TTL_SECS, oauth_service::OAuthService}, state::AppState}, errors::app_error::AppError};
+use crate::{api::{service::oauth_service::OAuthService, state::{AppState, REFRESH_TOKEN_TTL_SECS}}, errors::app_error::AppError};
 
 const REFRESH_TOKEN_COOKIE: &str = "refresh_token";
 
@@ -10,10 +10,6 @@ pub async fn refresh_token(
     State(state): State<AppState>,
     cookies: Cookies,
 ) -> Result<impl IntoResponse, AppError> {
-
-    for cook in cookies.list().iter() {
-        tracing::debug!("Name {}, Value {}", cook.name(), cook.value());
-    }
     let refresh_token_str = cookies
         .get(REFRESH_TOKEN_COOKIE)
         .ok_or(AppError::invalid_token())?
@@ -26,7 +22,7 @@ pub async fn refresh_token(
         .validate_refresh_token(&claims.jti).await
         .ok_or(AppError::token_revoked())?;
 
-    state.revoke_refresh_token(&claims.jti).await?;
+    state.get_jwt_service().revoke_refresh_token(&claims.jti).await?;
 
 
     let user_id: uuid::Uuid = claims.sub.parse().map_err(|_| AppError::invalid_token())?;
@@ -40,6 +36,7 @@ pub async fn refresh_token(
     let expires_at = Utc::now() + Duration::seconds(REFRESH_TOKEN_TTL_SECS);
     state.get_jwt_service().store_refresh_token(user.get_uuid().clone(), new_jti, expires_at).await?;
 
+    // TODO save to redis if refresh happens and check if refresh count is higher than
     OAuthService::set_auth_cookies(&cookies, &access_token, &refresh_token);
 
     Ok((
@@ -69,7 +66,7 @@ pub async fn revoke_token(
 
     // Verify and get JTI
     let claims = state.get_jwt_service().verify_refresh_token(&refresh_token_str)?;
-    state.revoke_refresh_token(&claims.jti).await?;
+    state.get_jwt_service().revoke_refresh_token(&claims.jti).await?;
 
     tracing::info!("Revoked refresh token jti={}", claims.jti);
 
@@ -96,7 +93,7 @@ pub async fn logout_all(
     let claims = state.get_jwt_service().verify_refresh_token(&refresh_token_str)?;
     let user_id: uuid::Uuid = claims.sub.parse().map_err(|_| AppError::invalid_token())?;
 
-    state.revoke_all_user_tokens(&user_id).await?;
+    state.get_jwt_service().revoke_all_user_tokens(&user_id).await?;
 
     tracing::info!("Revoked all tokens for user: {}", user_id);
 

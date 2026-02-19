@@ -5,13 +5,8 @@ use chrono::{DateTime, Utc};
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use uuid::Uuid;
 
-use crate::{api::model::{auth::claims::{AccessClaims, RefreshClaims}, dto::jwt_request::RefreshTokenRecord, user::User}, errors::{app_error::AppError, io_errors::IOError}};
+use crate::{api::{model::{auth::claims::{AccessClaims, RefreshClaims}, dto::jwt_request::RefreshTokenRecord, user::User}, state::{ACCESS_TOKEN_TTL_SECS, REFRESH_TOKEN_TTL_SECS}}, errors::{app_error::AppError, io_errors::IOError}};
 
-// TTL for access tokens: 5 minutes
-pub const ACCESS_TOKEN_TTL_SECS: i64 = 5 * 60;
-
-// TTL for refresh tokens: 1 day
-pub const REFRESH_TOKEN_TTL_SECS: i64 = 24 * 60 * 60;
 
 pub struct JwtService {
     access_encoding_key : EncodingKey,
@@ -31,6 +26,7 @@ impl JwtService {
             cache : cache
         }
     }
+    
 
     pub async fn store_refresh_token(
         &self,
@@ -43,6 +39,7 @@ impl JwtService {
             jti: jti.clone(),
             expires_at,
             revoked: false,
+            issued_at : Utc::now()
         };
         let serialized = serde_json::to_string(&record)
             .map_err(|e| AppError::io_error(IOError::record_not_fround("redis", &e.to_string())))?;
@@ -83,12 +80,19 @@ impl JwtService {
     pub fn verify_access_token(&self, token: &str) -> Result<AccessClaims, AppError> {
         let mut validation = Validation::new(jsonwebtoken::Algorithm::HS256);
         validation.validate_exp = true;
+        validation.validate_nbf = true;
+        validation.leeway = 60;
 
         let data = decode::<AccessClaims>(token, &self.access_decoding_key, &validation)
             .map_err(|_| AppError::invalid_token())?;
 
         // Ensure this is actually an access token and not a refresh token
         if data.claims.token_type != "access" {
+            return Err(AppError::invalid_token());
+        }
+
+        let now = Utc::now().timestamp();
+        if now - data.claims.iat > ACCESS_TOKEN_TTL_SECS {
             return Err(AppError::invalid_token());
         }
 
@@ -126,6 +130,11 @@ impl JwtService {
             return Err(AppError::invalid_token());
         }
 
+        let now = Utc::now().timestamp();
+        if now - data.claims.iat > REFRESH_TOKEN_TTL_SECS { 
+            return Err(AppError::invalid_token());
+        }
+
         Ok(data.claims)
     }
 
@@ -151,12 +160,63 @@ impl JwtService {
             .await
         {
             let revoked_at = DateTime::from_timestamp(ts, 0)?;
-            if record.expires_at <= revoked_at {
+            if record.issued_at <= revoked_at {
                 return None;
             }
         }
 
         Some(record)
+    }
+
+    // TODO : split this into smaller chunks
+    pub async fn revoke_refresh_token(&self, jti: &str) -> Result<(), AppError> {
+        let mut conn = self.cache.get().await
+            .map_err(|e| AppError::io_error(IOError::record_not_fround("redis", &e.to_string())))?;
+        
+        let bytes = redis::cmd("GET")
+            .arg(jti)
+            .query_async::<Option<Vec<u8>>>(&mut *conn)
+            .await
+            .map_err(|e| AppError::io_error(IOError::record_not_fround("redis", &e.to_string())))?;
+        
+        if let Some(bytes) = bytes {
+            let mut record: RefreshTokenRecord = serde_json::from_slice(&bytes)
+                .map_err(|e| AppError::io_error(IOError::record_not_fround("redis", &e.to_string())))?;
+            record.revoked = true;
+            let serialized = serde_json::to_string(&record)
+                .map_err(|e| AppError::io_error(IOError::record_not_fround("redis", &e.to_string())))?;
+            // Preserve remaining TTL
+            let ttl = (record.expires_at - Utc::now()).num_seconds().max(0) as u64;
+            redis::cmd("SET")
+                .arg(jti)
+                .arg(&serialized)
+                .arg("EX")
+                .arg(ttl)
+                .query_async::<()>(&mut *conn)
+                .await
+                .map_err(|e| AppError::io_error(IOError::record_not_fround("redis", &e.to_string())))?;
+        }
+        Ok(())
+    }
+
+    pub async fn revoke_all_user_tokens(&self, user_id: &Uuid) -> Result<(), AppError> {
+        let mut conn = self.cache.get().await
+            .map_err(|e| AppError::io_error(IOError::record_not_fround("redis", &e.to_string())))?; 
+        
+        let key = format!("revoked_all:{}", user_id);
+        let now = Utc::now().timestamp();
+        
+        // TODO : maybe add this to postgress as a marker of invalidation in case of critical failiure or just issue a global invalidation token on startup
+        redis::cmd("SET")
+            .arg(&key)
+            .arg(now)
+            .arg("EX")
+            .arg(60 * 60 * 24 * 30)// Period where the refresh is kept
+            .query_async::<()>(&mut *conn)
+            .await
+            .map_err(|e| AppError::io_error(IOError::record_not_fround("redis", &e.to_string())))?; 
+        
+        Ok(())
     }
 
 

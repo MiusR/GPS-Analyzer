@@ -56,7 +56,7 @@ impl FileService {
             return Err(AppError::io_error(IOError::invalid_path("downloads", "Invalid path name!")));
         }
 
-        let origin_path = std::path::Path::new(Self::UPLOADS_TEMP_DIRECTORY).join(&path).join(".gpx");
+        let origin_path = std::path::Path::new(Self::UPLOADS_TEMP_DIRECTORY).join(format!("{}.gpx", &path));
 
         match self.file_repo.stream_from_file(origin_path.to_str().unwrap_or("none.txt")).await {
             Ok (res) => Ok(res),

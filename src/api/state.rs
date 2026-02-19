@@ -2,12 +2,19 @@
 use std::sync::Arc;
 
 use bb8_redis::{RedisConnectionManager, bb8::{self, Pool}};
-use chrono::Utc;
 use sqlx::PgPool;
-use uuid::Uuid;
 
-use crate::{api::{model::{config::Config, dto::jwt_request::RefreshTokenRecord}, service::{file_service::FileService, jwt_service::JwtService, oauth_service::OAuthService, tier_service::TierService, user_service::UserService}}, errors::{app_error::AppError, io_errors::IOError}};
+use crate::api::{model::config::Config, repository::auth_repository::AuthRepository, service::{file_service::FileService, jwt_service::JwtService, oauth_service::OAuthService, tier_service::TierService, user_service::UserService}};
 
+
+pub const ACCESS_TOKEN_COOKIE: &str = "access_token";
+pub const REFRESH_TOKEN_COOKIE: &str = "refresh_token";
+pub const DEFAULT_USER_TIER: &str = "Basic";
+// TTL for access tokens: 5 minutes
+pub const ACCESS_TOKEN_TTL_SECS: i64 = 5 * 60;
+
+// TTL for refresh tokens: 1 day
+pub const REFRESH_TOKEN_TTL_SECS: i64 = 24 * 60 * 60;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -26,16 +33,13 @@ pub struct AppState {
 impl AppState { 
     pub fn new(config : Config, pg_pool : PgPool, cache : bb8::Pool<RedisConnectionManager>) -> Self {
         let shared_cache = Arc::new(cache);
-        let cache_clone = Arc::clone(&shared_cache);
 
         let tier_service = Arc::new(TierService::new(pg_pool.clone()));
-        let tier_clone = Arc::clone(&tier_service);
         
-        let user_service = Arc::new(UserService::new(pg_pool.clone(), tier_clone));
-        let user_clone = Arc::clone(&user_service);
+        let user_service = Arc::new(UserService::new(pg_pool.clone(), Arc::clone(&tier_service)));
 
-        let jwt_service = Arc::new(JwtService::new(config.get_jwt_access_secret(), config.get_jwt_refresh_secret(), cache_clone));
-        let auth_service  = Arc::new(OAuthService::new(user_clone));
+        let jwt_service = Arc::new(JwtService::new(config.get_jwt_access_secret(), config.get_jwt_refresh_secret(), Arc::clone(&shared_cache)));
+        let auth_service  = Arc::new(OAuthService::new(Arc::clone(&user_service), Arc::clone(&jwt_service), AuthRepository::new(Arc::clone(&shared_cache)) ));
         
         AppState {
             config : Arc::new(config),
@@ -48,100 +52,6 @@ impl AppState {
             db_pool : pg_pool.clone()
         }
     }
-
-    //TODO Move this into jwt service -------------------------------------------------------------------------
-
-
-    pub async fn revoke_refresh_token(&self, jti: &str) -> Result<(), AppError> {
-        let mut conn = self.cache_pool.get().await
-            .map_err(|e| AppError::io_error(IOError::record_not_fround("redis", &e.to_string())))?;
-        
-        let bytes = redis::cmd("GET")
-            .arg(jti)
-            .query_async::<Option<Vec<u8>>>(&mut *conn)
-            .await
-            .map_err(|e| AppError::io_error(IOError::record_not_fround("redis", &e.to_string())))?;
-        
-        if let Some(bytes) = bytes {
-            let mut record: RefreshTokenRecord = serde_json::from_slice(&bytes)
-                .map_err(|e| AppError::io_error(IOError::record_not_fround("redis", &e.to_string())))?;
-            record.revoked = true;
-            let serialized = serde_json::to_string(&record)
-                .map_err(|e| AppError::io_error(IOError::record_not_fround("redis", &e.to_string())))?;
-            // Preserve remaining TTL
-            let ttl = (record.expires_at - Utc::now()).num_seconds().max(0) as u64;
-            redis::cmd("SET")
-                .arg(jti)
-                .arg(&serialized)
-                .arg("EX")
-                .arg(ttl)
-                .query_async::<()>(&mut *conn)
-                .await
-                .map_err(|e| AppError::io_error(IOError::record_not_fround("redis", &e.to_string())))?;
-        }
-        Ok(())
-    }
-
-
-    pub async fn revoke_all_user_tokens(&self, user_id: &Uuid) -> Result<(), AppError> {
-        let mut conn = self.cache_pool.get().await
-            .map_err(|e| AppError::io_error(IOError::record_not_fround("redis", &e.to_string())))?; 
-        
-        let key = format!("revoked_all:{}", user_id);
-        let now = Utc::now().timestamp();
-        
-        // TODO : maybe add this to postgress as a marker of invalidation in case of critical failiure or just issue a global invalidation token on startup
-        redis::cmd("SET")
-            .arg(&key)
-            .arg(now)
-            .arg("EX")
-            .arg(60 * 60 * 24 * 30)// Period where the refresh is kept
-            .query_async::<()>(&mut *conn)
-            .await
-            .map_err(|e| AppError::io_error(IOError::record_not_fround("redis", &e.to_string())))?; 
-        
-        Ok(())
-    }
-
-    // TODO Move this to auth service --------------------------------------------------------------------------
-    /*
-        Store auth in cache with autodelete
-    */
-    pub async fn store_oauth_state(&self, state: String, verifier : String) {
-        let pool = self.cache_pool.clone();
-        
-        tokio::spawn(async move {
-            if let Ok(mut conn) = pool.get().await {
-                let _ = redis::cmd("SET")
-                    .arg(&state)
-                    .arg(&verifier)
-                    .arg("EX")
-                    .arg(60 * 10) // 10 mins
-                    .query_async::<()>(&mut *conn)
-                    .await;
-            }else {
-                tracing::error!("Could not store state {} to redis.", &state);
-            }
-        });
-    }
-
-    /*
-        Verify if the value is in cache and delete if it is.
-    */
-    pub async fn validate_and_consume_oauth_state(&self, state: &str) -> Option<String> {
-        if let Ok(mut connection) = self.cache_pool.clone().get().await {
-        let result = redis::cmd("GETDEL")
-            .arg(state)
-            .query_async::<Option<String>>(&mut *connection)
-            .await;
-            return result.ok().flatten();
-        } else {
-            tracing::error!("Could not retrieve from redis {}.", &state);
-        }
-        None
-    }
-    
-    // -----------------------------------------------------------------------------------------------------------
 
     pub fn get_user_service(&self) -> &UserService {
         &self.user_service

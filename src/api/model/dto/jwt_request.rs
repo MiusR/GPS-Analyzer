@@ -23,6 +23,7 @@ pub struct RefreshTokenRecord {
     pub jti: String,
     pub expires_at: DateTime<Utc>,
     pub revoked: bool,
+    pub issued_at: DateTime<Utc>
 }
 
 #[derive(Debug, Deserialize)]

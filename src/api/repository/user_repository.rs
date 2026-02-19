@@ -57,7 +57,7 @@ impl UserRepository {
             &provider.to_string(),
             provider_client_uuid
         ).fetch_one(&self.pg_pool).await;
-        tracing::debug!("{} {}", provider.to_string(), provider_client_uuid);
+        
         let user_row = match result {
             Ok(user_row) => user_row,
             Err(err) => {

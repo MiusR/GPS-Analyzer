@@ -6,6 +6,8 @@ use uuid::Uuid;
 
 use crate::{api::model::{auth::oauth::OAuthProvider, tier::Tier}, errors::domain_error::DomainError};
 
+// TODO : reverify email?
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct User {
     uuid : Uuid,
