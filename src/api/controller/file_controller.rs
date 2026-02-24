@@ -2,13 +2,14 @@
 use axum::{Json, body::Body, extract::State, http::{Response, StatusCode, header}, response::IntoResponse
 };
 
-use crate::api::{model::dto::file_request::{DownloadRequest, UploadCompleted}, state::AppState};
+use crate::api::{middleware::auth::AuthenticatedUser, model::dto::file_request::{DownloadRequest, UploadCompleted}, state::AppState};
 
 
 /*
     API endpoint for saving request body to file on server
 */
 pub async fn save_to_temp(
+    AuthenticatedUser(_): AuthenticatedUser,
     State(state) : State<AppState>,
     request : Body
 ) -> impl IntoResponse {
@@ -27,6 +28,7 @@ pub async fn save_to_temp(
     API endpoint for downloading file from server
 */
 pub async fn download_from_temp(
+    AuthenticatedUser(_): AuthenticatedUser,
     State(state) : State<AppState>,
     Json(payload): Json<DownloadRequest>,
 ) -> impl IntoResponse {

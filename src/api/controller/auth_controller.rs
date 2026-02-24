@@ -21,7 +21,6 @@ pub async fn google_login(
     
     state.get_auth_service().store_oauth_state(csrf_token.secret().clone(), pkce_verifier.into_secret()).await;
 
-    tracing::debug!("Redirecting user to Google OAuth2: {}", auth_url);
     Redirect::to(auth_url.as_str()).into_response()
 }
 
@@ -56,7 +55,8 @@ pub async fn google_callback(
     let google_info_url = "https://www.googleapis.com/oauth2/v2/userinfo";
     let provider_info = fetch_provider_info(google_info_url, &token_result).await?;
 
-    state.get_auth_service().issue_tokens_for_provider(&cookie, OAuthProvider::Google, provider_info).await
+    state.get_auth_service().issue_tokens_for_provider(&cookie, OAuthProvider::Google, provider_info).await?;
+    Ok(Redirect::to("http://localhost:5173/dashboard").into_response()) // TODO : this should not be a magic variable and it should be an env var
 }
 
 // /*

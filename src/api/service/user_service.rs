@@ -6,7 +6,7 @@ use uuid::Uuid;
 use crate::{api::{model::{auth::oauth::OAuthProvider, user::{User, UserEmail}}, repository::user_repository::UserRepository, service::tier_service::TierService}, errors::app_error::AppError};
 
 
-
+// TODO force creation of folder with user uuid inside of the users on user creation and on user deletion
 
 #[derive(Clone)]
 pub struct UserService {

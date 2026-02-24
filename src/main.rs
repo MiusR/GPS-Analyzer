@@ -26,7 +26,7 @@ async fn connect_and_migrate() -> Pool<Postgres> {
 
 async fn start_server(server_state : AppState) {
     let cors_methods = vec![Method::GET, Method::POST,  Method::DELETE, Method::PUT];
-    let local_port = "3000";
+    let local_port = "5173";
     let app = build_router(server_state)
     .layer(build_cors_layer(local_port, cors_methods));
     // TODO : Take params from .env or even better cli 

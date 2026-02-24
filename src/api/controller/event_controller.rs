@@ -2,26 +2,11 @@ use axum::{Json, extract::State, response::IntoResponse};
 
 use crate::api::{middleware::auth::AuthenticatedUser, model::{dto::tier_request::{CreateTierRequest, GetTierRequest}, tier::Tier}, state::AppState};
 
-// FIXME check claim sub for users within group that can modify this
 /*
-    API endpoint for requesting data about a specific tier
+    API endpoint for creating a new racing event
 */
-pub async fn get_tier_info(
-    AuthenticatedUser(_): AuthenticatedUser,
-    State(state) : State<AppState>,
-    Json(payload) : Json<GetTierRequest>
-) -> impl IntoResponse {
-    match state.get_tier_service().get_tier_by_name(&payload.name).await {
-        Ok(tier) => axum::Json::from(tier).into_response(),
-        Err(err) => err.into_response()
-    }
-}
-
-/*
-    API endpoint for adding data about a specific tier
-*/
-pub async fn add_tier(
-    AuthenticatedUser(_): AuthenticatedUser,
+pub async fn add_event_for_user(
+    AuthenticatedUser(user): AuthenticatedUser,
     State(state) : State<AppState>,
     Json(payload) : Json<CreateTierRequest>
 ) -> impl IntoResponse {

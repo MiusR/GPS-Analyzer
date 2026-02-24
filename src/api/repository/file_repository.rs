@@ -77,7 +77,7 @@ impl FileRepository {
         })
     }
 
-
+    
     /*
         Checks if a path is valid and does not contain any illegal characters that are not considered path::Component::Normal
     */

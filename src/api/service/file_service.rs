@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use axum::body::BodyDataStream;
 use tokio::fs::File;
 use tokio_util::io::ReaderStream;
@@ -23,6 +25,8 @@ impl FileService {
         FileService { file_repo : FileRepository::new()}
     }
 
+    // TODO : move these inside of the repo? why do we have them here
+
     /*
         Init resources required for track file upload via api
     */
@@ -33,6 +37,52 @@ impl FileService {
         tokio::fs::create_dir_all("./".to_string() + Self::UPLOADS_USERS_DIRECTORY)
         .await
         .expect("Failed to create users uploads directory");
+    }
+
+    /*
+        Create folder for user with @user_uuid and @folder_name
+    */
+    pub async fn create_user_folder(&self, user_uuid : &Uuid, folder_name : &str) -> Result<(), IOError> {
+        let path: PathBuf = [
+            ".", 
+            Self::UPLOADS_USERS_DIRECTORY, 
+            &user_uuid.to_string(), 
+            folder_name
+        ].iter().collect();
+
+        path.canonicalize().map_err(|err| {
+            tracing::warn!("Tried to create suspicious path: {}", err.to_string());
+            return IOError::invalid_path("user folder creation", "Invalid given path.");
+        })?;
+
+        tokio::fs::create_dir_all(path)
+        .await.map_err(|err| {
+            tracing::error!("Failed to create user folder with folder_name: {}", folder_name);
+            return IOError::invalid_path("user folder creation", &err.to_string());
+        })
+    }
+
+      /*
+        Create folder for user with @user_uuid and @folder_name
+    */
+    pub async fn delete_user_folder(&self, user_uuid : &Uuid, folder_name : &str) -> Result<(), IOError> {
+         let path: PathBuf = [
+            ".", 
+            Self::UPLOADS_USERS_DIRECTORY, 
+            &user_uuid.to_string(), 
+            folder_name
+        ].iter().collect();
+
+        path.canonicalize().map_err(|err| {
+            tracing::warn!("Tried to create suspicious path: {}", err.to_string());
+            return IOError::invalid_path("user folder creation", "Invalid given path.");
+        })?;
+
+        tokio::fs::remove_dir_all(path)
+        .await.map_err(|err| {
+            tracing::error!("Failed to delete user folder with folder_name: {}", folder_name);
+            return IOError::invalid_path("user folder deletion", &err.to_string());
+        })
     }
 
 

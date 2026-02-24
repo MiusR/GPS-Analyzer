@@ -39,9 +39,9 @@ fn auth_router() -> Router<AppState> {
     .route("/google/callback", get(google_callback))
     //.route("/github/callback", get(github_callback))
     // Token management
-    .route("/refresh", get(refresh_token))
-    .route("/revoke", get(revoke_token))
-    .route("/logout-all", get(logout_all))
+    .route("/refresh", post(refresh_token))
+    .route("/revoke", post(revoke_token))
+    .route("/logout-all", post(logout_all))
     
     //Util - atuenticated
     .route("/me", get(get_me))
