@@ -5,7 +5,7 @@ use chrono::{DateTime, Utc};
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use uuid::Uuid;
 
-use crate::{api::{model::{auth::claims::{AccessClaims, RefreshClaims}, dto::jwt_request::RefreshTokenRecord, user::User}, state::{ACCESS_TOKEN_TTL_SECS, REFRESH_TOKEN_TTL_SECS}}, errors::{app_error::AppError, io_errors::IOError}};
+use crate::{api::{model::{auth::claims::{AccessClaims, RefreshClaims}, dto::jwt_request::RefreshTokenRecord, user::User}, state::{ACCESS_TOKEN_TTL_SECS, REFRESH_TOKEN_TTL_SECS}}, errors::{app_error::AppError, io_errors::IOError, service_errors::ServiceError}};
 
 
 pub struct JwtService {
@@ -220,4 +220,14 @@ impl JwtService {
     }
 
 
+}
+
+
+pub fn get_user_uuid_from_claims(claims : AccessClaims) -> Result<Uuid, ServiceError> {
+    Uuid::try_parse(&claims.sub).map_err(
+        |err| {
+            tracing::info!("Tried to create event for use with invalid id: {}", err.to_string());
+            ServiceError::invalid_data("Invalid user identifier.")
+        }
+    )
 }

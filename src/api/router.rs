@@ -1,8 +1,8 @@
 
-use axum::{Router, routing::{get, post}};
+use axum::{Router, routing::{get, post, put}};
 use tower_cookies::CookieManagerLayer;
 use tower_http::limit::RequestBodyLimitLayer;
-use crate::api::{controller::{ auth_controller::{google_callback, google_login}, file_controller::{download_from_temp, save_to_temp}, generic::{health, landing}, tier_controller::{add_tier, get_tier_info}, token_controller::{logout_all, refresh_token, revoke_token}, user_controller::{delete_user, get_me, get_user, update_user}}, state::AppState};
+use crate::api::{controller::{ auth_controller::{google_callback, google_login}, event_controller::{add_event_for_user, delete_event_for_user}, file_controller::{download_from_temp, save_to_temp}, generic::{health, landing}, tier_controller::{add_tier, get_tier_info}, token_controller::{logout_all, refresh_token, revoke_token}, user_controller::{delete_user, get_me, get_user, update_user}}, state::AppState};
 
 const FILE_SIZE_LIMIT : usize = 1024;
 
@@ -28,6 +28,7 @@ fn api_router() -> Router<AppState> {
     .route("/track/",  post(save_to_temp).get(download_from_temp))
     .route("/tier/", get(get_tier_info).post(add_tier))
     .route("/user/", get(get_user).put(update_user).delete(delete_user))
+    .route("/event", post(add_event_for_user).delete(delete_event_for_user))
 }
 
 fn auth_router() -> Router<AppState> {

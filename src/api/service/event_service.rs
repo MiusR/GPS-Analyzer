@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use uuid::Uuid;
 
-use crate::{api::{repository::event_repository::{self, EventRepository}, service::file_service::FileService}, errors::service_errors::ServiceError};
+use crate::{api::{repository::event_repository::EventRepository, service::file_service::FileService}, errors::service_errors::ServiceError};
 
 
 #[derive(Clone)]
@@ -28,10 +28,17 @@ impl EventService {
         if let Err(err) = self.event_repository.create_event(event_name, &user_uuid).await {
             self.file_service.delete_user_folder(user_uuid, event_name)
             .await
-            .map_err(|err| ServiceError::io_error(err))?;
+            .map_err(|err| ServiceError::io_error(err)); // Why is this not traced?
             return Err(ServiceError::io_error(err));
         }
         
+        Ok(())
+    }
+
+    pub async fn delete_event(&self, user_uuid : &Uuid, event_name : &str) -> Result<(), ServiceError> {
+        self.file_service.delete_user_folder(user_uuid, event_name)
+        .await
+        .map_err(|err| ServiceError::io_error(err))?;
         Ok(())
     }
 }

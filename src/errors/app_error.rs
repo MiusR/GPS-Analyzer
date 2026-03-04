@@ -153,7 +153,7 @@ impl IntoResponse for AppError {
                 }
             },
             AppErrorType::AuthError(_) => {
-                StatusCode::FORBIDDEN
+                StatusCode::UNAUTHORIZED
             },
             AppErrorType::JWT(_) => {
                 StatusCode::UNAUTHORIZED
