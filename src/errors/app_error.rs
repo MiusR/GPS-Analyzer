@@ -150,6 +150,7 @@ impl IntoResponse for AppError {
                     crate::errors::service_errors::ServiceErrorType::IOError(err) => map_io_to_status_code(&err.etype),
                     crate::errors::service_errors::ServiceErrorType::InvalidData(_) => StatusCode::BAD_REQUEST,
                     crate::errors::service_errors::ServiceErrorType::TrackSnappingError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+                    crate::errors::service_errors::ServiceErrorType::InternalAuthtentication(_) => StatusCode::INTERNAL_SERVER_ERROR 
                 }
             },
             AppErrorType::AuthError(_) => {

@@ -5,7 +5,7 @@ use chrono::{Duration, Utc};
 use oauth2::{AuthUrl, Client, ClientId, ClientSecret, EndpointNotSet, EndpointSet, RedirectUrl, StandardRevocableToken, TokenUrl, basic::{BasicClient, BasicErrorResponse, BasicRevocationErrorResponse, BasicTokenIntrospectionResponse, BasicTokenResponse}};
 use tower_cookies::{Cookie, Cookies};
 
-use crate::{api::{model::{auth::oauth::{OAuthProvider, ProviderUserInfo}, user::User}, repository::auth_repository::AuthRepository, service::{jwt_service::JwtService, user_service::UserService}, state::{ACCESS_TOKEN_COOKIE, ACCESS_TOKEN_TTL_SECS, DEFAULT_USER_TIER, REFRESH_TOKEN_COOKIE, REFRESH_TOKEN_TTL_SECS}}, errors::app_error::AppError};
+use crate::{api::{model::{auth::oauth::{OAuthProvider, ProviderUserInfo}, user::User}, repository::auth_repository::AuthRepository, service::{jwt_service::JwtService, user_service::UserService}, state::{ACCESS_TOKEN_COOKIE, ACCESS_TOKEN_TTL_SECS, DEFAULT_USER_TIER, REFRESH_TOKEN_COOKIE, REFRESH_TOKEN_TTL_SECS}}, errors::{app_error::AppError, service_errors::ServiceError}};
 
 
 pub struct OAuthService {
@@ -181,13 +181,13 @@ impl OAuthService {
         let basic_client = BasicClient::new(ClientId::new(google_client_id))
         .set_client_secret(ClientSecret::new(google_secret))
         .set_auth_uri(AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth".to_string()).map_err(|_| {
-            AppError::auth_error("Failed to parse correct auth uri") // FIXME : add separate app error for this and make it internal server error as status code
+            AppError::service_error(ServiceError::internal_auth_error("Failed to parse correct auth uri")) 
         })?)
         .set_token_uri(TokenUrl::new("https://oauth2.googleapis.com/token".to_string()).map_err(|_| {
-            AppError::auth_error("Failed to parse token uri") // FIXME : same here
+            AppError::service_error(ServiceError::internal_auth_error("Failed to parse token uri")) 
         })?)
         .set_redirect_uri(RedirectUrl::new(google_redirect).map_err(|_| {
-             AppError::auth_error("Failed to parse redirect uri") // FIXME : same here
+             AppError::service_error(ServiceError::internal_auth_error("Failed to parse redirect uri"))
         })?);
        
        Ok(basic_client)
@@ -200,13 +200,13 @@ impl OAuthService {
     //     let basic_client = BasicClient::new(ClientId::new(config.get_github_client_id().to_string()))
     //     .set_client_secret(ClientSecret::new(config.get_github_client_secret().to_string()))
     //     .set_auth_uri(AuthUrl::new("https://github.com/login/oauth/authorize".to_string()).map_err(|_| {
-    //         AppError::auth_error("Failed to parse correct auth uri") // FIXME : add separate app error for this and make it internal server error as status code
+    //         AppError::service_error(ServiceError::internal_auth_error("Failed to parse correct auth uri"))
     //     })?)
     //     .set_token_uri(TokenUrl::new("https://github.com/login/oauth/access_token".to_string()).map_err(|_| {
-    //         AppError::auth_error("Failed to parse token uri") // FIXME : same here
+    //         AppError::service_error(ServiceError::internal_auth_error("Failed to parse token uri"))
     //     })?)
     //     .set_redirect_uri(RedirectUrl::new(config.github_redirect_uri()).map_err(|_| {
-    //          AppError::auth_error("Failed to parse redirect uri") // FIXME : same here
+    //          AppError::service_error(ServiceError::internal_auth_error("Failed to parse redirect uri"))
     //     })?);
        
     //    Ok(basic_client)

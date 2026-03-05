@@ -1,4 +1,4 @@
-use std::{error::Error, fmt::{Display, Result}};
+use std::{error::Error, fmt::{Display, Result, write}};
 
 use crate::errors::io_errors::IOError;
 
@@ -27,6 +27,10 @@ impl ServiceError {
 
     pub fn track_snapping_error(reason : &str) -> Self {
         return ServiceError { etype: ServiceErrorType::TrackSnappingError(reason.to_string()) }
+    }
+
+    pub fn internal_auth_error(reason : &str) -> Self {
+        return ServiceError { etype: ServiceErrorType::InternalAuthtentication(reason.to_string()) }
     }
 }
 
@@ -59,6 +63,9 @@ pub enum ServiceErrorType {
 
     // Reason
     TrackSnappingError(String),
+
+    // Reason
+    InternalAuthtentication(String) 
 }
 
 impl Display for ServiceErrorType {
@@ -73,7 +80,9 @@ impl Display for ServiceErrorType {
             ServiceErrorType::EmptyTrack() =>
                 write!(f, "Tried to process an empty track"),
             ServiceErrorType::TrackSnappingError(err) =>
-                write!(f, "failed to snap tracks : {}", err)
+                write!(f, "failed to snap tracks : {}", err),
+            ServiceErrorType::InternalAuthtentication(err) =>
+                write!(f, "failed to bind auth internally {}", err)
         }
     }
 }

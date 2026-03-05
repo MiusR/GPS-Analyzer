@@ -3,7 +3,7 @@ use std::{u32};
 
 use glam::Vec2;
 
-use crate::internal::model::track::reference::ReferenceTrack;
+use crate::{errors::domain_error::DomainError, internal::model::track::reference::ReferenceTrack};
 
 
 
@@ -23,9 +23,13 @@ pub struct Grid {
 
 impl Grid {
     // Build a grid from a reference track, cell_size is given in meters. A cell is cell_size * cell_size patch of real world space.
-    pub fn from_track(ref_track : &ReferenceTrack, cell_size : f32) -> Self {
+    pub fn from_track(ref_track : &ReferenceTrack, cell_size : f32) -> Result<Self, DomainError> {
         // Find bounds of grid
-        let first = ref_track.track.get(0).expect("Track cannot be empty"); // FIXME : why are we expecting on track in frid implementation? do you want to kill app randomly
+        let first = ref_track.track.get(0)
+        .ok_or_else(|| {
+            tracing::error!("Tried to create a Grid from an empty ReferenceTrack");
+            DomainError::empty_field("track")
+        })?;
         let mut min_x = first.x;
         let mut min_y = first.y;
         let mut max_x = first.x;
@@ -83,14 +87,14 @@ impl Grid {
 
 
 
-        Grid { 
+        Ok(Grid { 
             min: Vec2 { x: min_x, y: min_y }, 
             inv_cell, 
             width: width,
             height : height,
             cells: cells, 
             indices: indices 
-        }
+        })
     }
 
     #[inline(always)]

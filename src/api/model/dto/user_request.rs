@@ -48,7 +48,7 @@ impl From<&User> for UserResponse {
             id: user.get_uuid().to_string(),
             provider: user.get_provider().to_string(),
             email: Some(user.get_email().to_string()),
-            name: Some(user.get_name().to_string()), // FIXME : this might not be provided by authentication services so add some to user
+            name: Some(user.get_name().to_string()),
             avatar_url: user.get_avatar_url().clone(),
         }
     }
