@@ -29,44 +29,34 @@ pub async fn get_me(
 pub async fn get_user(
     State(state) : State<AppState>,
     Json(payload) : Json<GetUserRequest>
-) -> impl IntoResponse {
+) -> Result<impl IntoResponse, AppError> {
     if let Some(email) = payload.email {
-        match state.get_user_service().get_user_by_email(&email).await {
-            Ok(user) => {return axum::Json::from(user).into_response()},
-            Err(err) => {return err.into_response();}
-            
-        }
+        let user = state.get_user_service().get_user_by_email(&email).await?;
+        return Ok(Json::from(user));
     }
 
     if let Some(uuid) = payload.uuid {
-        match state.get_user_service().get_user_by_uuid(&uuid).await {
-            Ok(user) => {return axum::Json::from(user).into_response()},
-            Err(err) => {return err.into_response();}
-            
-        }
+        let user=  state.get_user_service().get_user_by_uuid(&uuid).await?;
+        return Ok(Json::from(user));
     }
 
-    AppError::service_error(ServiceError::invalid_data("Request must contain either a valid user uuid or email.")).into_response()
+    Err(AppError::service_error(ServiceError::invalid_data("Request must contain either a valid user uuid or email.")))
 }
 
 
 pub async fn update_user(
     State(state) : State<AppState>,
     Json(payload) : Json<UpdateUserRequest>
-) -> impl IntoResponse {
-    match state.get_user_service().update_user(&payload.uuid, payload.name, payload.email, payload.tier, payload.avatar_url).await {
-        Ok(user) => {return axum::Json::from(user).into_response();},
-        Err(err) => {return err.into_response();}
-    }
+) -> Result<impl IntoResponse, AppError> {
+    let user = state.get_user_service().update_user(&payload.uuid, payload.name, payload.email, payload.tier, payload.avatar_url).await?;
+    Ok(Json::from(user))
 }
 
 pub async fn delete_user(
     State(state) : State<AppState>,
     Json(payload) : Json<DeleteUserRequest>
-) -> impl IntoResponse {
-    match state.get_user_service().delete_user(&payload.uuid).await {
-        Ok(user) => {return axum::Json::from(user).into_response();},
-        Err(err) => {return err.into_response();}
-    }
+) -> Result<impl IntoResponse, AppError> {
+    let user = state.get_user_service().delete_user(&payload.uuid).await?;
+    Ok(Json::from(user))
 }
 

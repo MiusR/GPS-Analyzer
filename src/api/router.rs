@@ -1,8 +1,8 @@
 
-use axum::{Router, routing::{get, post, put}};
+use axum::{Router, routing::{get, post}};
 use tower_cookies::CookieManagerLayer;
 use tower_http::limit::RequestBodyLimitLayer;
-use crate::api::{controller::{ auth_controller::{google_callback, google_login}, event_controller::{add_event_for_user, delete_event_for_user, get_events_for_user}, file_controller::{download_from_temp, save_to_temp}, generic::{health, landing}, tier_controller::{add_tier, get_tier_info}, token_controller::{logout_all, refresh_token, revoke_token}, user_controller::{delete_user, get_me, get_user, update_user}}, state::AppState};
+use crate::api::{controller::{ auth_controller::{google_callback, google_login}, event_controller::{add_event_for_user, delete_event_for_user, get_events_for_user}, file_controller::{download_from_temp, save_to_temp}, generic::{health, landing}, tier_controller::{ get_tier_info}, token_controller::{logout_all, refresh_token, revoke_token}, user_controller::{delete_user, get_me, get_user, update_user}}, state::AppState};
 
 const FILE_SIZE_LIMIT : usize = 1024;
 

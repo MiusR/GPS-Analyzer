@@ -10,18 +10,15 @@ use crate::{api::{model::auth::oauth::{OAuthCallback, OAuthProvider}, state::App
 */
 pub async fn google_login(
     State(state): State<AppState>
-) -> impl IntoResponse {
+) -> Result<impl IntoResponse, AppError> {
     let config = state.get_config();
-    let client = match state.get_auth_service().google_client(config.get_google_client_id().to_string(), config.get_google_client_secret().to_string(), config.google_redirect_uri().to_string()) {
-        Ok(g_client) => g_client,
-        Err(err) => {return err.into_response();}
-    };
+    let client = state.get_auth_service().google_client(config.get_google_client_id().to_string(), config.get_google_client_secret().to_string(), config.google_redirect_uri().to_string())?;
     
     let (auth_url, csrf_token, pkce_verifier) = build_google_claims_request(&client);
     
     state.get_auth_service().store_oauth_state(csrf_token.secret().clone(), pkce_verifier.into_secret()).await;
 
-    Redirect::to(auth_url.as_str()).into_response()
+    Ok(Redirect::to(auth_url.as_str()))
 }
 
 
@@ -56,7 +53,7 @@ pub async fn google_callback(
     let provider_info = fetch_provider_info(google_info_url, &token_result).await?;
 
     state.get_auth_service().issue_tokens_for_provider(&cookie, OAuthProvider::Google, provider_info).await?;
-    Ok(Redirect::to("http://localhost:5173/dashboard").into_response()) // TODO : this should not be a magic variable and it should be an env var
+    Ok(Redirect::to("http://localhost:5173/dashboard").into_response())
 }
 
 // /*
@@ -104,7 +101,7 @@ pub async fn google_callback(
 //     let client = state.get_auth_service().github_client(state.get_config())?;
 
 //     let http_client = reqwest::ClientBuilder::new()
-//     .redirect(reqwest::redirect::Policy::limited(1)) // TODO : might need to increment the amount of redirects
+//     .redirect(reqwest::redirect::Policy::limited(1)) 
 //     .build().map_err(|err| {
 //         AppError::oauth2(&err.to_string())
 //     })?;

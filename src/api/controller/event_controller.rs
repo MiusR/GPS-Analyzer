@@ -3,7 +3,6 @@ use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 use crate::{api::{middleware::auth::AuthenticatedUser, model::dto::event_request::{CreateEventRequest, DeleteEventRequest, GetEventsRequest}, service::jwt_service::get_user_uuid_from_claims, state::AppState}, errors::{app_error::AppError, io_errors::IOError}};
 
 
-// TODO : All endpoints should follow new standard of return Result<impl IntoResponse, AppError>
 // TODO : Look into proper logging of information to avoid attack vectors 
 /*
     API endpoint for creating a new racing event

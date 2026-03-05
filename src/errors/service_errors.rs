@@ -1,4 +1,4 @@
-use std::{error::Error, fmt::{Display, Result, write}};
+use std::{error::Error, fmt::{Display, Result}};
 
 use crate::errors::io_errors::IOError;
 
