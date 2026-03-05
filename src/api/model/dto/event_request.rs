@@ -1,8 +1,8 @@
 use serde::Deserialize;
 
 #[derive(Deserialize)]
-pub struct GetEventRequest {
-    pub name: String,
+pub struct GetEventsRequest {
+    pub name: Option<String>
 }
 
 #[derive(Deserialize)]
@@ -14,5 +14,6 @@ pub struct DeleteEventRequest {
 pub struct CreateEventRequest {
     pub name: String
 }
+
 
 

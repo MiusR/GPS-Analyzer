@@ -79,6 +79,40 @@ impl EventRepository {
         Ok(event)
     }
 
+    /*
+        Query data base @pg_pool for racing event by @uuid
+    */
+    pub async fn get_event_by_user_and_name(&self, user_uuid : &Uuid, event_name: &str) -> Result<RacingEvent, IOError> { 
+        let result = sqlx::query!(
+            r#"
+            SELECT racing_events.id, racing_events.event_name, racing_events.created_at
+            FROM user_events ue
+            INNER JOIN racing_events 
+            ON racing_events.id = ue.racing_id
+            WHERE ue.id = $1 AND racing_events.event_name = $2
+            "#,
+            &user_uuid,
+            event_name
+        ).fetch_one(&self.pg_pool).await;
+        
+
+        let event_row = match result {
+            Ok(event_row) => event_row,
+            Err(err) => {
+                tracing::error!("Tried to retrieve undefined event {}", err.to_string());
+                return Err(IOError::record_not_fround("event", &err.to_string()));
+            }
+        };
+
+        let event = RacingEvent {
+            uuid: event_row.id,
+            event_name : event_row.event_name,
+            created_at : DateTime::from_naive_utc_and_offset(event_row.created_at, Utc)
+        };
+
+        Ok(event)
+    }
+
 
 
 
@@ -118,6 +152,37 @@ impl EventRepository {
         })?;
         
         Ok(event_uuid)
+    }
+
+
+    pub async fn delete_event(&self, name: &str, user_uuid: &Uuid) -> Result<(), IOError> {
+        let found_event = self.get_event_by_user_and_name(user_uuid, name).await?;
+
+        sqlx::query!(
+            r#"
+            DELETE FROM user_events
+            WHERE user_events.racing_id = $1
+            "#,
+            &found_event.uuid
+        ).execute(&self.pg_pool)
+        .await.map_err(|err| {
+                tracing::error!("Failed to delete found event from user_events {}", err.to_string());
+                IOError::record_operation("database", &err.to_string())
+        })?;
+
+        sqlx::query!(
+            r#"
+            DELETE FROM racing_events
+            WHERE racing_events.id = $1
+            "#,
+            &found_event.uuid
+        ).execute(&self.pg_pool)
+        .await.map_err(|err| {
+                tracing::error!("Failed to remove event from racing_events {}", err.to_string());
+                IOError::record_operation("database", &err.to_string())
+        })?;
+
+        Ok(())
     }
 
 
